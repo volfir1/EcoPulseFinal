@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "@context/*": ["./shared/context/*"],
+      "@features/*": ["./features/*"],
+      "@modules/*": ["./features/modules/*"],
+      "@shared/*": ["./shared/*"],
+      "@assets/*": ["./assets/*"],
+      "@images/*": ["./assets/images/*"],
+      "@components/*": ["./shared/components/*"],
+      "@admin/*": ["./admin/*"],
+      "@exceptions/*": ["./exceptions/*"],
+      "@config/*": ["./config/*"],
+      "@services/*": ["./services/*"],
+      "@store/*": ["./store/*"],
+      "@utils/*": ["./utils/*"]
+    },
+    "types": []  
+  }
+}
