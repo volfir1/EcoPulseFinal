@@ -260,32 +260,36 @@ export const useProfile = () => {
 
   const uploadAvatar = async (file, progressCallback) => {
     try {
+      // Get API base URL from environment variable with fallback
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const UPLOAD_URL = `${BASE_URL}/api/upload/avatar/base64`;
+      
       // Convert file to base64
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-
+  
         reader.onload = async () => {
           const base64String = reader.result;
-
+  
           try {
             // Update progress to 10%
             if (progressCallback) progressCallback(10);
-
+  
             // Create unique identifier
             const uniqueId = Date.now();
-
+  
             // Prepare data for upload
             const uploadData = {
               base64Image: base64String,
               avatarId: 'custom-upload',
               uniqueId
             };
-
+  
             // Update progress to 30%
             if (progressCallback) progressCallback(30);
-
-            // Make the API call
-            const response = await fetch('http://localhost:5000/api/upload/avatar/base64', {
+  
+            // Make the API call with the dynamic URL
+            const response = await fetch(UPLOAD_URL, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -294,23 +298,23 @@ export const useProfile = () => {
               credentials: 'include',
               body: JSON.stringify(uploadData)
             });
-
+  
             // Update progress to 80%
             if (progressCallback) progressCallback(80);
-
+  
             if (!response.ok) {
               throw new Error('Upload failed');
             }
-
+  
             const data = await response.json();
             console.log("Avatar upload response:", data);
-
+  
             // Update progress to 100%
             if (progressCallback) progressCallback(100);
-
+  
             // Return the Cloudinary URL
             const avatarUrl = data.avatar || data.avatarUrl;
-
+  
             // Update user data in localStorage to ensure refresh displays new avatar
             const userString = localStorage.getItem('user');
             if (userString) {
@@ -318,18 +322,18 @@ export const useProfile = () => {
               userData.avatar = avatarUrl;
               localStorage.setItem('user', JSON.stringify(userData));
             }
-
+  
             resolve(avatarUrl);
           } catch (error) {
             console.error("Error in avatar upload:", error);
             reject(error);
           }
         };
-
+  
         reader.onerror = () => {
           reject(new Error('Error reading file'));
         };
-
+  
         // Read the file as a data URL (base64)
         reader.readAsDataURL(file);
       });
@@ -338,7 +342,6 @@ export const useProfile = () => {
       throw error;
     }
   };
-  
   const optimizeImage = async (base64String) => {
     return new Promise((resolve, reject) => {
       const img = new Image();

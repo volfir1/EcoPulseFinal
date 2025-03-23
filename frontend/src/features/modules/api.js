@@ -1,10 +1,13 @@
 import axios from 'axios';
 
+// Determine the base URL based on environment
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // Create axios instance with proper configuration
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',  // Make sure this matches your Django server
+  baseURL: baseURL,  // Use environment variable for Railway backend
   timeout: 30000, // Increase timeout to 30 seconds
-  withCredentials: false, // Required for CORS when using credentials
+  withCredentials: true, // Required for CORS when using credentials (cookies)
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -14,7 +17,11 @@ const api = axios.create({
 // Add request interceptor to handle tokens if needed
 api.interceptors.request.use(
   (config) => {
-    // You can add authorization headers here if needed
+    // Get token from localStorage if using JWT authentication
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -25,6 +32,10 @@ api.interceptors.request.use(
 // Add response interceptor to handle common errors
 api.interceptors.response.use(
   (response) => {
+    // Handle token refresh if your API returns a new token
+    if (response.data && response.data.newToken) {
+      localStorage.setItem('token', response.data.newToken);
+    }
     return response;
   },
   (error) => {
@@ -32,7 +43,11 @@ api.interceptors.response.use(
     if (error.code === 'ECONNABORTED') {
       console.error('Request timeout - the server took too long to respond');
     } else if (error.code === 'ERR_NETWORK') {
-      console.error('Network error - please check if the Django server is running at http://127.0.0.1:8000');
+      console.error(`Network error - cannot connect to the backend at ${baseURL}`);
+    } else if (error.response && error.response.status === 401) {
+      console.error('Authentication error - you may need to log in again');
+      // Optional: Redirect to login page or clear tokens
+      // localStorage.removeItem('token');
     } else {
       console.error('API Error:', error.message || 'Unknown error');
     }
@@ -40,5 +55,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+console.log(`API configured to use backend at: ${baseURL}`);
 
 export default api;

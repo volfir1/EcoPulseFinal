@@ -2,7 +2,9 @@
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandling'; // Use your existing adminUtils instead
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 const ADMIN_URL = `${API_BASE_URL}/admin`;
 
 // Helper function to get auth headers from localStorage
