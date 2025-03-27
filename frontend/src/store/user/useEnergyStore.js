@@ -137,35 +137,37 @@ const createEnergyStore = (energyType) => {
     
     // Enhanced fetchData method with better error handling 
 // Enhanced fetchData method with more robust error handling
-// In useEnergyStore.js - Find the fetchData method
 fetchData: async (startYear, endYear) => {
   set({ loading: true, apiError: null });
   
   try {
-    // Try to get data from API
     const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
     
-    if (response?.data?.predictions) {
-      // Process API data and update state
-      const formattedData = response.data.predictions.map(item => ({
-        date: item.Year,
-        value: Math.abs(item['Predicted Production'])
-      }));
-
-      set({ 
-        generationData: formattedData,
-        currentProjection: formattedData[formattedData.length - 1]?.value || null,
-        loading: false,
-        apiError: null
-      });
-    } else {
-      // No data returned - use mock data
+    if (!response?.data?.predictions) {
       throw new Error('No predictions data available');
     }
+
+    // Format data for chart
+    const formattedData = response.data.predictions.map(item => ({
+      date: item.Year,
+      value: Math.abs(item['Predicted Production']) // Convert negative values to positive
+    }));
+
+    // Get latest prediction value
+    const projection = formattedData[formattedData.length - 1]?.value || null;
+
+    // Update state with just what's needed for the chart
+    set({ 
+      generationData: formattedData,
+      currentProjection: projection,
+      loading: false,
+      apiError: null
+    });
+
   } catch (error) {
     console.error(`Error fetching ${energyType} data:`, error);
     
-    // Use mock data with a user-friendly message
+    // Use mock data as fallback
     const mockData = get().generateMockData(startYear, endYear);
     
     set({
@@ -173,13 +175,12 @@ fetchData: async (startYear, endYear) => {
       currentProjection: mockData[mockData.length - 1]?.value || null,
       loading: false,
       apiError: {
-        message: "Using simulated data for visualization",
+        message: "Using simulated data",
         usingMockData: true
       }
     });
   }
 },
-
     
     // Generate mock data for the specified year range
     generateMockData: (startYear, endYear) => {
