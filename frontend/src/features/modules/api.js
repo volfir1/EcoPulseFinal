@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Determine the base URLs for each backend
 const NODE_BACKEND_URL = import.meta.env.VITE_API_URL|| 'https://ecopulsebackend-production.up.railway.app';
-const DJANGO_BACKEND_URL = import.meta.env.VITE_PY_URL || 'https://your-django-backend-url.railway.app'; // Update this
+const DJANGO_BACKEND_URL = import.meta.env.VITE_PY_URL || 'https://ecopulsebackend-production.up.railway.app'; // Update this
 
 // Create axios instance with proper configuration
 const api = axios.create({
