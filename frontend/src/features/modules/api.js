@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_PY_URL || ' http://localhost:8000/api/';  // Use local backend as default
+const baseURL = import.meta.env.VITE_PY_URL || 'https://ecopulsebackend-production.up.railway.app';  // Use local backend as default
 
 // Create axios instance with proper configuration
 const api = axios.create({
