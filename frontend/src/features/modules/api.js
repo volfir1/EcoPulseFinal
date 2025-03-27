@@ -7,7 +7,7 @@ const baseURL = import.meta.env.VITE_PY_URL || 'https://ecopulsebackend-producti
 const api = axios.create({
   baseURL: baseURL,  // Use environment variable for Railway backend
   timeout: 30000, // Increase timeout to 30 seconds
-  withCredentials: true, // Required for CORS when using credentials (cookies)
+  withCredentials: true, // Required for CORS when using credentials (cookiess)
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
