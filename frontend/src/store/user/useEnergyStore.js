@@ -137,45 +137,35 @@ const createEnergyStore = (energyType) => {
     
     // Enhanced fetchData method with better error handling 
 // Enhanced fetchData method with more robust error handling
+// In useEnergyStore.js - Find the fetchData method
 fetchData: async (startYear, endYear) => {
   set({ loading: true, apiError: null });
   
-  // Determine if we're in development or production
-  const isProduction = window.location.hostname !== 'localhost' && 
-                       window.location.hostname !== '127.0.0.1';
-  
   try {
-    // Use the correct base URL depending on environment
-    const baseUrl = isProduction 
-      ? 'https://ecopulsebackend-production.up.railway.app' 
-      : 'http://127.0.0.1:8000';
-      
-    console.log(`Fetching from: ${baseUrl}${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
-    
-    // Make the API request with the appropriate base URL
+    // Try to get data from API
     const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
     
-    if (!response?.data?.predictions) {
+    if (response?.data?.predictions) {
+      // Process API data and update state
+      const formattedData = response.data.predictions.map(item => ({
+        date: item.Year,
+        value: Math.abs(item['Predicted Production'])
+      }));
+
+      set({ 
+        generationData: formattedData,
+        currentProjection: formattedData[formattedData.length - 1]?.value || null,
+        loading: false,
+        apiError: null
+      });
+    } else {
+      // No data returned - use mock data
       throw new Error('No predictions data available');
     }
-
-    // Process data and update state as normal
-    const formattedData = response.data.predictions.map(item => ({
-      date: item.Year,
-      value: Math.abs(item['Predicted Production'])
-    }));
-
-    set({ 
-      generationData: formattedData,
-      currentProjection: formattedData[formattedData.length - 1]?.value || null,
-      loading: false,
-      apiError: null
-    });
-
   } catch (error) {
     console.error(`Error fetching ${energyType} data:`, error);
     
-    // Use mock data as fallback
+    // Use mock data with a user-friendly message
     const mockData = get().generateMockData(startYear, endYear);
     
     set({
@@ -183,7 +173,7 @@ fetchData: async (startYear, endYear) => {
       currentProjection: mockData[mockData.length - 1]?.value || null,
       loading: false,
       apiError: {
-        message: "Using simulated data",
+        message: "Using simulated data for visualization",
         usingMockData: true
       }
     });

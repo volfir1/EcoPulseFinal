@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Lock, Phone, Mail, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -10,6 +10,27 @@ import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 import VerifyEmail from '@features/auth/verification/VerifiEmail';
 
 const Register = () => {
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  
+  // Update responsive states based on screen width
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsTablet(window.innerWidth >= 640 && window.innerWidth < 1024);
+    };
+    
+    // Set initial value
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const {
     passwordVisibility: {
       passwordVisible,
@@ -31,17 +52,17 @@ const Register = () => {
     <>
       <Loader />
       
-      <div className="flex min-h-screen">
+      <div className="flex flex-col md:flex-row min-h-screen">
         {/* Left Side - Primary Color Background */}
         <div
-          className="flex flex-col items-center justify-center flex-1 p-12 text-center"
+          className={`flex flex-col items-center justify-center p-6 md:p-12 text-center ${isMobile ? 'py-8' : ''} ${isMobile || isTablet ? 'w-full' : 'flex-1'}`}
           style={{
             background: `linear-gradient(135deg, ${p.main}, ${p.dark})`
           }}
         >
-          <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
-          <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
-          <p className="text-lg leading-relaxed text-white/80 max-w-md">
+          <img src="/logo.png" alt="EcoPulse Logo" className={`${isMobile ? 'w-20 h-20' : 'w-32 h-32'} mb-4 md:mb-6`} />
+          <h1 className={`mb-3 md:mb-6 ${isMobile ? 'text-3xl' : 'text-5xl'} font-bold text-white`}>EcoPulse</h1>
+          <p className={`text-sm md:text-lg leading-relaxed text-white/80 max-w-md ${isMobile ? 'hidden' : ''}`}>
             Join our community of eco-conscious individuals and businesses.
             Together, we can make a difference for a sustainable future.
           </p>
@@ -49,27 +70,30 @@ const Register = () => {
 
         {/* Right Side - Form with Background Image */}
         <div
-          className="relative flex items-center justify-center w-1/2 bg-center bg-cover"
+          className={`relative flex items-center justify-center ${isMobile || isTablet ? 'w-full py-8 px-4' : 'w-1/2'} bg-center bg-cover`}
           style={{
-            backgroundImage: `url(${crosswalk})`,
+            backgroundImage: isMobile ? 'none' : `url(${crosswalk})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            backgroundColor: isMobile ? '#f9f9f9' : 'transparent'
           }}
         >
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
-          />
+          {!isMobile && (
+            <div
+              className="absolute inset-0"
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            />
+          )}
 
-          <div className="relative z-10 w-full max-w-md p-8 mx-12 bg-white shadow-xl rounded-3xl">
+          <div className={`relative z-10 w-full max-w-md ${isMobile ? 'p-4 mx-0' : isTablet ? 'p-6 mx-4' : 'p-8 mx-12'} bg-white shadow-xl rounded-3xl`}>
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center"
+              <div className={`${isMobile ? 'w-12 h-12' : 'w-16 h-16'} rounded-full flex items-center justify-center`}
                 style={{ border: `2px solid ${t.main}` }}>
-                <User className="w-8 h-8" style={{ color: p.main }} />
+                <User className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`} style={{ color: p.main }} />
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold text-center mb-6"
+            <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-center mb-4 md:mb-6`}
               style={{ color: t.main }}>
               Create Account
             </h2>
@@ -80,11 +104,11 @@ const Register = () => {
               onSubmit={handleSubmit}
             >
               {({ isSubmitting, touched, errors, values, handleChange }) => (
-                <Form className="space-y-4">
-                  {/* Name fields - side by side */}
-                  <div className="flex gap-2">
+                <Form className="space-y-3 md:space-y-4">
+                  {/* Name fields - responsive layout */}
+                  <div className={`${isMobile ? 'flex flex-col space-y-3' : 'flex gap-2'}`}>
                     {/* First Name Input */}
-                    <div className="flex-1">
+                    <div className={`${isMobile ? 'w-full' : 'flex-1'}`}>
                       <div className="relative flex items-center">
                         <User className="absolute left-3 w-4 h-4 text-gray-400" />
                         <Field
@@ -105,7 +129,7 @@ const Register = () => {
                     </div>
 
                     {/* Last Name Input */}
-                    <div className="flex-1">
+                    <div className={`${isMobile ? 'w-full' : 'flex-1'}`}>
                       <div className="relative flex items-center">
                         <User className="absolute left-3 w-4 h-4 text-gray-400" />
                         <Field
@@ -146,27 +170,6 @@ const Register = () => {
                       className="text-xs text-red-500 mt-1"
                     />
                   </div>
-
-                  {/* Phone Input (Optional) */}
-                  {/* <div>
-                    <div className="relative flex items-center">
-                      <Phone className="absolute left-3 w-4 h-4 text-gray-400" />
-                      <Field
-                        type="tel"
-                        name="phone"
-                        placeholder="Phone Number (Optional)"
-                        className={`w-full h-10 pl-9 pr-3 border rounded-lg text-sm ${
-                          touched.phone && errors.phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <ErrorMessage
-                      name="phone"
-                      component="div"
-                      className="text-xs text-red-500 mt-1"
-                    />
-                  </div> */}
 
                   {/* Password Input with strength meter and visibility toggle */}
                   <div>
@@ -217,7 +220,10 @@ const Register = () => {
                                passwordStrength.color === 'yellow-500' ? '#eab308' : 
                                passwordStrength.color === 'green-500' ? '#22c55e' : '#6b7280'
                            }}>
-                          Password strength: {passwordStrength.label} - {passwordStrength.feedback}
+                          {isMobile ? 
+                            `${passwordStrength.label}: ${passwordStrength.feedback}` :
+                            `Password strength: ${passwordStrength.label} - ${passwordStrength.feedback}`
+                          }
                         </p>
                       </div>
                     )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   AreaChart, Area, ResponsiveContainer, CartesianGrid
@@ -11,6 +11,25 @@ import * as energyUtils from '@store/user/energyUtils'
 const WindEnergy = () => {
   const ENERGY_TYPE = 'wind';
   const colorScheme = energyUtils.getEnergyColorScheme(ENERGY_TYPE);
+  
+  // Add state to track screen size
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Update isMobile state based on screen width
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for tablets
+    };
+    
+    // Set initial value
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Use unified hook with 'wind' as the energy type
   const {
@@ -40,29 +59,30 @@ const WindEnergy = () => {
   const safeGenerationData = Array.isArray(generationData) ? generationData : [];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
-            <Wind size={24} />
+    <div className="p-3 md:p-6">
+      <div className="mb-4 md:mb-6">
+        <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex justify-between items-center'} mb-4`}>
+          <h1 className="text-xl md:text-2xl font-semibold flex items-center gap-2" style={{ color: colorScheme.primaryColor }}>
+            <Wind size={isMobile ? 20 : 24} />
             Wind Energy Analytics
           </h1>
-          <div className="text-gray-500">
+          <div className="text-sm md:text-base text-gray-500">
             Selected Range: {selectedStartYear} - {selectedEndYear}
-            <span className="text-sm ml-1">({selectedEndYear - selectedStartYear} years)</span>
+            <span className="text-xs md:text-sm ml-1">({selectedEndYear - selectedStartYear} years)</span>
           </div>
         </div>
 
-        <div className="flex justify-between items-center">
+        <div className={`${isMobile ? 'flex flex-col space-y-3' : 'flex justify-between items-center'}`}>
           <YearPicker
             initialStartYear={selectedStartYear}
             initialEndYear={selectedEndYear}
             onStartYearChange={handleStartYearChange}
             onEndYearChange={handleEndYearChange}
+            className={`${isMobile ? 'w-full' : 'w-2/3'}`}
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-2 md:mt-0">
             <Button 
-              className="whitespace-nowrap text-white transition-colors"
+              className="whitespace-nowrap text-white transition-colors text-sm md:text-base w-full md:w-auto"
               style={{ 
                 backgroundColor: colorScheme.primaryColor,
                 ':hover': {
@@ -77,18 +97,26 @@ const WindEnergy = () => {
         </div>
       </div>
 
-      <Card.Wind className="p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+      <Card.Wind className="p-3 md:p-6 mb-4 md:mb-6">
+        <h2 className="text-lg md:text-xl font-semibold mb-2 md:mb-4 text-gray-800">
           Power Generation Trend
         </h2>
-        <div className="text-3xl font-bold mb-1" style={{ color: colorScheme.primaryColor }}>
+        <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colorScheme.primaryColor }}>
           {currentProjection} GWh
         </div>
-        <p className="text-gray-600 mb-4">Predictive Analysis Generation projection</p>
-        {/* Add ref to the chart container */}
-        <div className="h-[250px]" ref={chartRef}>
+        <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Predictive Analysis Generation projection</p>
+        {/* Dynamic height based on screen size */}
+        <div className="h-[200px] md:h-[250px] lg:h-[300px]" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={safeGenerationData}>
+            <AreaChart 
+              data={safeGenerationData}
+              margin={{ 
+                top: 5, 
+                right: isMobile ? 5 : 20, 
+                left: isMobile ? 0 : 10, 
+                bottom: 5 
+              }}
+            >
               <defs>
                 <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
                   {areaChartConfig.gradient.stops.map((stop, index) => (
@@ -102,8 +130,17 @@ const WindEnergy = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid {...gridConfig.cartesianGrid} />
-              <XAxis {...gridConfig.xAxis} dataKey="date" />
-              <YAxis {...gridConfig.yAxis} />
+              <XAxis 
+                {...gridConfig.xAxis} 
+                dataKey="date" 
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tickFormatter={isMobile ? (value) => (typeof value === 'string' ? value.split(' ')[0] : value) : undefined} // Show only first part on mobile if it's a string
+              />
+              <YAxis 
+                {...gridConfig.yAxis} 
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                width={isMobile ? 30 : 40}
+              />
               <Tooltip {...areaChartConfig.tooltip} />
               <Area {...areaChartConfig.area} />
             </AreaChart>

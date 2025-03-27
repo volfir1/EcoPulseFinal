@@ -1,6 +1,6 @@
 // components/Login.jsx
-import React from 'react';
-import { User, Lock, Mail, AlertTriangle, Clock, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Lock, Mail, AlertTriangle, Clock, RefreshCw, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, p, t } from '@shared/index';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -9,6 +9,27 @@ import { useLogin } from './loginHook';
 import crosswalk from '../../../../assets/images/vectors/crosswalk.jpg';
 
 const Login = () => {
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  
+  // Update responsive states based on screen width
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsTablet(window.innerWidth >= 640 && window.innerWidth < 1024);
+    };
+    
+    // Set initial value
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const {
     handleGoogleSignIn,
     handleGoogleRedirectSignIn,
@@ -20,28 +41,28 @@ const Login = () => {
     authError,
     // Account reactivation props
     isDeactivated,
-    showReactivationOption, // Renamed from showRecoveryOption
+    showReactivationOption,
     lockoutInfo,
     recoveryEmail,
     setRecoveryEmail,
-    handleRequestReactivation // Renamed from handleRequestRecovery
+    handleRequestReactivation
   } = useLogin();
 
   return (
     <>
       {hookLoading && <Loader />}
       
-      <div className="flex min-h-screen">
+      <div className="flex flex-col md:flex-row min-h-screen">
         {/* Left Side - Primary Color Background */}
         <div 
-          className="flex flex-col items-center justify-center flex-1 p-12 text-center" 
+          className={`flex flex-col items-center justify-center p-6 md:p-12 text-center ${isMobile ? 'py-8' : ''} ${isMobile || isTablet ? 'w-full' : 'flex-1'}`}
           style={{ 
             background: `linear-gradient(135deg, ${p.main}, ${p.dark})` 
           }}
         >
-          <img src="/logo.png" alt="EcoPulse Logo" className="w-32 h-32 mb-6" />
-          <h1 className="mb-6 text-5xl font-bold text-white">EcoPulse</h1>
-          <p className="text-lg leading-relaxed text-white/80 max-w-md">
+          <img src="/logo.png" alt="EcoPulse Logo" className={`${isMobile ? 'w-20 h-20' : 'w-32 h-32'} mb-4 md:mb-6`} />
+          <h1 className={`mb-3 md:mb-6 ${isMobile ? 'text-3xl' : 'text-5xl'} font-bold text-white`}>EcoPulse</h1>
+          <p className={`text-sm md:text-lg leading-relaxed text-white/80 max-w-md ${isMobile ? 'hidden' : ''}`}>
             Join our community of eco-conscious individuals and businesses.
             Together, we can make a difference for a sustainable future.
           </p>
@@ -49,33 +70,36 @@ const Login = () => {
 
         {/* Right Side - Background Image */}
         <div 
-          className="relative flex items-center justify-center w-1/2 bg-center bg-cover"
+          className={`relative flex items-center justify-center ${isMobile || isTablet ? 'w-full py-8 px-4' : 'w-1/2'} bg-center bg-cover`}
           style={{
-            backgroundImage: `url(${crosswalk})`,
+            backgroundImage: isMobile ? 'none' : `url(${crosswalk})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            backgroundColor: isMobile ? '#f9f9f9' : 'transparent'
           }}
         >
-          <div 
-            className="absolute inset-0" 
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
-          />
+          {!isMobile && (
+            <div 
+              className="absolute inset-0" 
+              style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            />
+          )}
           
-          <div className="relative z-10 w-full max-w-md p-8 mx-12 bg-white shadow-xl rounded-3xl">
+          <div className={`relative z-10 w-full max-w-md ${isMobile ? 'p-4 mx-0' : isTablet ? 'p-6 mx-4' : 'p-8 mx-12'} bg-white shadow-xl rounded-3xl`}>
             <div className="flex justify-center mb-4">
               <div 
-                className="w-16 h-16 rounded-full flex items-center justify-center" 
+                className={`${isMobile ? 'w-12 h-12' : 'w-16 h-16'} rounded-full flex items-center justify-center`}
                 style={{ border: `2px solid ${p.main}` }}
               >
                 <User 
-                  className="w-8 h-8" 
+                  className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'}`}
                   style={{ color: p.main }} 
                 />
               </div>
             </div>
 
             <h2 
-              className="mb-6 text-2xl font-bold text-center"
+              className={`mb-4 md:mb-6 ${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-center`}
               style={{ color: t.main }}
             >
               {isDeactivated ? 'Account Deactivated' : 'Login'}
@@ -83,15 +107,15 @@ const Login = () => {
 
             {/* Deactivated Account UI */}
             {isDeactivated && (
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 {/* Lockout Notice */}
                 {lockoutInfo && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
+                  <div className="p-3 md:p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2 md:space-y-3">
                     <div className="flex items-center space-x-2 text-yellow-800">
-                      <Clock className="w-5 h-5" />
-                      <h3 className="font-medium">Reactivation Locked</h3>
+                      <Clock className="w-4 h-4 md:w-5 md:h-5" />
+                      <h3 className="font-medium text-sm md:text-base">Reactivation Locked</h3>
                     </div>
-                    <p className="text-sm text-yellow-700">
+                    <p className="text-xs md:text-sm text-yellow-700">
                       Your account reactivation is currently locked. Please try again in {lockoutInfo.hours} hours.
                     </p>
                   </div>
@@ -99,21 +123,21 @@ const Login = () => {
 
                 {/* Reactivation Options */}
                 {showReactivationOption && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
+                  <div className="p-3 md:p-4 bg-green-50 border border-green-200 rounded-lg space-y-2 md:space-y-3">
                     <div className="flex items-center space-x-2 text-green-800">
-                      <AlertTriangle className="w-5 h-5" />
-                      <h3 className="font-medium">Account Deactivated</h3>
+                      <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
+                      <h3 className="font-medium text-sm md:text-base">Account Deactivated</h3>
                     </div>
-                    <p className="text-sm text-green-700">
+                    <p className="text-xs md:text-sm text-green-700">
                       Your account has been deactivated. A reactivation link has been sent to your email.
                     </p>
                     
                     <div className="space-y-2 pt-2">
-                      <p className="text-sm font-medium text-gray-700">
+                      <p className="text-xs md:text-sm font-medium text-gray-700">
                         Didn't receive the email? Request a new reactivation link:
                       </p>
                       
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <input
                           type="email"
                           value={recoveryEmail}
@@ -125,7 +149,7 @@ const Login = () => {
                         <button
                           onClick={handleRequestReactivation}
                           disabled={hookLoading}
-                          className="h-10 px-4 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center"
+                          className="h-10 px-4 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center"
                         >
                           <RefreshCw className="w-4 h-4 mr-2" />
                           Send
@@ -156,7 +180,7 @@ const Login = () => {
                   onSubmit={handleSubmit}
                 >
                   {({ isSubmitting, touched, errors }) => (
-                    <Form className="space-y-4">
+                    <Form className="space-y-3 md:space-y-4">
                       <div className="space-y-1">
                         <div className="relative flex items-center">
                           <Mail 
@@ -241,12 +265,12 @@ const Login = () => {
                       
                       {/* Redirect Option - only shows after popup is blocked */}
                       {showRedirectOption && (
-                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                        <div className="mt-3 md:mt-4 p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2 md:space-y-3">
                           <div className="flex items-center space-x-2 text-blue-800">
-                            <AlertTriangle className="w-5 h-5" />
-                            <h3 className="font-medium">Popup Blocked</h3>
+                            <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
+                            <h3 className="font-medium text-sm">Popup Blocked</h3>
                           </div>
-                          <p className="text-sm text-blue-700">
+                          <p className="text-xs md:text-sm text-blue-700">
                             Your browser blocked the sign-in popup. You can enable popups in your browser settings or use the redirect method instead.
                           </p>
                           <button
@@ -256,14 +280,14 @@ const Login = () => {
                             className="w-full h-10 flex items-center justify-center gap-2 bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                           >
                             <img src="/google.svg" alt="Google" className="w-4 h-4 invert" />
-                            <span>Sign in with Google (Redirect)</span>
+                            <span>{isMobile ? 'Google (Redirect)' : 'Sign in with Google (Redirect)'}</span>
                           </button>
                         </div>
                       )}
 
                       {/* Display auth-specific errors */}
                       {authError && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs md:text-sm text-red-700">
                           {authError}
                         </div>
                       )}
