@@ -140,26 +140,34 @@ const createEnergyStore = (energyType) => {
 fetchData: async (startYear, endYear) => {
   set({ loading: true, apiError: null });
   
+  // Determine if we're in development or production
+  const isProduction = window.location.hostname !== 'localhost' && 
+                       window.location.hostname !== '127.0.0.1';
+  
   try {
+    // Use the correct base URL depending on environment
+    const baseUrl = isProduction 
+      ? 'https://ecopulsebackend-production.up.railway.app' 
+      : 'http://127.0.0.1:8000';
+      
+    console.log(`Fetching from: ${baseUrl}${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
+    
+    // Make the API request with the appropriate base URL
     const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
     
     if (!response?.data?.predictions) {
       throw new Error('No predictions data available');
     }
 
-    // Format data for chart
+    // Process data and update state as normal
     const formattedData = response.data.predictions.map(item => ({
       date: item.Year,
-      value: Math.abs(item['Predicted Production']) // Convert negative values to positive
+      value: Math.abs(item['Predicted Production'])
     }));
 
-    // Get latest prediction value
-    const projection = formattedData[formattedData.length - 1]?.value || null;
-
-    // Update state with just what's needed for the chart
     set({ 
       generationData: formattedData,
-      currentProjection: projection,
+      currentProjection: formattedData[formattedData.length - 1]?.value || null,
       loading: false,
       apiError: null
     });
@@ -181,6 +189,7 @@ fetchData: async (startYear, endYear) => {
     });
   }
 },
+
     
     // Generate mock data for the specified year range
     generateMockData: (startYear, endYear) => {
