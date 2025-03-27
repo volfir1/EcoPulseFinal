@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Determine the base URL based on environment
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const baseURL = import.meta.env.PY_URL || 'http://127.0.0.1:8000';
 
 // Create axios instance with proper configuration
 const api = axios.create({
