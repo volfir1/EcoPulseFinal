@@ -2,7 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Paper, Box, Typography, Card, CardContent, Chip, Grid, Divider, IconButton, Tooltip } from '@mui/material';
 import { LocateIcon, Info, RefreshCw, BarChart2, MapPin, Zap, ZapOff } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
+
+// Import API utility with Railway fallback
+import { railwayApi } from '@modules/api';
 
 // Import components
 import MapView from './Mapview';
@@ -272,32 +274,60 @@ const EnergySharing = () => {
   const [hoveredCity, setHoveredCity] = useState(null);
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Year change handler
   const handleYearChange = (year) => {
     setSelectedYear(year);
   };
 
-  // Fetch data from API based on selected year
+  // Fetch data from Railway API based on selected year
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (retryCount = 0) => {
       try {
         setIsLoading(true);
-        const response = await axios.get('http://127.0.0.1:8000/api/peertopeer/', {
+        setError(null);
+        
+        // Using Railway API instead of local API
+        const response = await railwayApi.get('/api/peertopeer/predictions', {
           params: {
             year: selectedYear
           }
         });
         
-        // Add coordinates to each location
-        const locationsWithCoordinates = response.data.predictions.map(location => ({
-          ...location,
-          coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
-        }));
+        if (response.data.status === 'success') {
+          // Add coordinates to each location
+          const locationsWithCoordinates = response.data.predictions.map(location => ({
+            ...location,
+            coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
+          }));
+          
+          setLocations(locationsWithCoordinates);
+        } else {
+          setError(`Error: ${response.data.message || 'Unknown error'}`);
+          setLocations([]);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
         
-        setLocations(locationsWithCoordinates);
-      } catch (error) {
-        console.error('Error fetching data:', error);
+        // Retry logic - only retry for network/timeout errors up to 2 times
+        if ((err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') && retryCount < 2) {
+          console.log(`Retrying fetch attempt ${retryCount + 1}...`);
+          setTimeout(() => {
+            fetchData(retryCount + 1);
+          }, 2000); // Wait 2 seconds before retry
+          return;
+        }
+        
+        // Show user-friendly error message
+        if (err.code === 'ECONNABORTED') {
+          setError(`Request timed out. The server is taking too long to respond. Please try again later.`);
+        } else if (err.code === 'ERR_NETWORK') {
+          setError(`Network error. Unable to connect to the server. Please check your internet connection.`);
+        } else {
+          setError(`Error fetching data: ${err.message}`);
+        }
+        
         setLocations([]);
       } finally {
         setIsLoading(false);
@@ -381,6 +411,40 @@ const EnergySharing = () => {
     }));
   }, [locations]);
 
+  // Handle refresh button
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Fetch data with a slight delay to show loading state
+    setTimeout(() => {
+      const fetchDataOnRefresh = async () => {
+        try {
+          const response = await railwayApi.get('/api/peertopeer/predictions', {
+            params: { year: selectedYear }
+          });
+          
+          if (response.data.status === 'success') {
+            const locationsWithCoordinates = response.data.predictions.map(location => ({
+              ...location,
+              coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
+            }));
+            
+            setLocations(locationsWithCoordinates);
+            setError(null);
+          } else {
+            setError(`Error: ${response.data.message || 'Unknown error'}`);
+          }
+        } catch (err) {
+          console.error('Error refreshing data:', err);
+          setError(`Failed to refresh data: ${err.message}`);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchDataOnRefresh();
+    }, 800);
+  };
+
   return (
     <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh', py: 4 }}>
       <Box sx={{ maxWidth: '1280px', mx: 'auto', px: { xs: 2, md: 4 } }}>
@@ -407,17 +471,48 @@ const EnergySharing = () => {
                 height: '40px',
                 '&:hover': { bgcolor: '#1b5e20' }
               }}
-              onClick={() => {
-                setIsLoading(true);
-                setTimeout(() => setIsLoading(false), 800);
-              }}
+              onClick={handleRefresh}
+              disabled={isLoading}
             >
               <RefreshCw size={20} />
             </IconButton>
           </Box>
         </Box>
         
-        {locationsWithTotals.length > 0 && (
+        {error && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 2,
+              borderLeft: '4px solid #f44336',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={600} color="error.main">
+              Connection Error
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {error}
+            </Typography>
+            <Box sx={{ mt: 2 }}>
+              <IconButton
+                size="small"
+                onClick={handleRefresh}
+                sx={{ 
+                  bgcolor: 'error.light',
+                  color: 'white',
+                  '&:hover': { bgcolor: 'error.main' }
+                }}
+              >
+                <RefreshCw size={16} />
+              </IconButton>
+            </Box>
+          </Paper>
+        )}
+        
+        {!error && locationsWithTotals.length > 0 && (
           <SummaryCard locationsWithTotals={locationsWithTotals} />
         )}
         
@@ -450,6 +545,10 @@ const EnergySharing = () => {
                 {isLoading ? (
                   <Box sx={{ textAlign: 'center', py: 8 }}>
                     <Typography>Loading data...</Typography>
+                  </Box>
+                ) : locationsWithTotals.length === 0 && !error ? (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography>No data available for {selectedYear}</Typography>
                   </Box>
                 ) : (
                   <Box sx={{ mt: 2 }}>
@@ -509,6 +608,7 @@ const EnergySharing = () => {
                 locationsWithTotals={locationsWithTotals}
                 hoveredCity={hoveredCity}
                 onMarkerHover={setHoveredCity}
+                isLoading={isLoading}
               />
             </Paper>
           </Grid>
