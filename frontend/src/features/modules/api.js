@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_URL = 
   (typeof process !== 'undefined' ? process.env.REACT_APP_API_URL : undefined) || 
   (import.meta && import.meta.env ? import.meta.env.VITE_API_URL : undefined) || 
-  'https://ecopulsebackend-1.onrender.com/api';
+  'https://ecopulsebackend-1.onrender.com';
 
 const RAILWAY_API_URL = 
   (typeof process !== 'undefined' ? process.env.REACT_APP_RAILWAY_API_URL : undefined) || 
