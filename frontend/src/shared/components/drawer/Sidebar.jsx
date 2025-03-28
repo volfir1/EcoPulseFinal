@@ -1,3 +1,4 @@
+//Sidebar.jsx
 import * as React from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
@@ -19,6 +20,7 @@ import {
   Fab,
   useScrollTrigger,
   Zoom,
+  Tooltip,
 } from '@mui/material';
 import { Logout, Menu as MenuIcon } from '@mui/icons-material';
 
@@ -99,6 +101,34 @@ const logoutButtonStyles = {
   '&:hover': { backgroundColor: 'action.hover' }
 };
 
+// Hamburger button for closed drawer
+const ClosedDrawerMenuButton = ({ onClick, open }) => {
+  if (open) return null;
+  
+  return (
+    <Tooltip title="Expand menu" placement="right">
+      <IconButton
+        onClick={onClick}
+        sx={{
+          position: 'fixed',
+          top: 16,
+          left: 12,
+          zIndex: 1200,
+          bgcolor: 'background.paper',
+          boxShadow: 1,
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+          display: { xs: 'none', sm: 'flex' }
+        }}
+        size="small"
+      >
+        <MenuIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+};
+
 // Mobile fab button
 const FloatingMenuButton = ({ onClick }) => {
   const theme = useTheme();
@@ -128,27 +158,7 @@ const FloatingMenuButton = ({ onClick }) => {
 };
 
 // Memoized logout button component
-const LogoutButton = React.memo(({ open }) => (
-  <ListItemButton 
-    sx={{
-      ...logoutButtonStyles,
-      justifyContent: open ? 'initial' : 'center',
-    }}
-    onClick={() => console.log('Logout clicked')}
-  >
-    <ListItemIcon sx={{
-      minWidth: 0,
-      mr: open ? 3 : 'auto',
-      justifyContent: 'center',
-    }}>
-      <Logout />
-    </ListItemIcon>
-    <ListItemText
-      primary="Logout"
-      sx={{ opacity: open ? 1 : 0 }}
-    />
-  </ListItemButton>
-));
+
 
 const Sidebar = () => {
   const { open, openSubMenu, handleDrawer, handleSubMenu } = useDrawer();
@@ -182,7 +192,7 @@ const Sidebar = () => {
   // Mobile drawer content
   const drawerContent = (
     <Box sx={mainContainerStyles}>
-      <Logo open={true} onToggle={isMobile ? handleMobileDrawerToggle : handleDrawer} />
+      <Logo open={isMobile ? true : open} onToggle={isMobile ? handleMobileDrawerToggle : handleDrawer} />
       
       <List sx={scrollableListStyles}>
         <NavigationItems 
@@ -193,12 +203,15 @@ const Sidebar = () => {
         />
       </List>
       
-     
+    
     </Box>
   );
 
   return (
     <Box sx={{ display: 'flex' }}>
+      {/* Hamburger menu button when drawer is closed */}
+      <ClosedDrawerMenuButton onClick={handleDrawer} open={open} />
+      
       {/* Desktop/Tablet Drawer */}
       <StyledDrawer variant="permanent" open={open}>
         {drawerContent}
