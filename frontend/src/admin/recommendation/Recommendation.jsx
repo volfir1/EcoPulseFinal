@@ -14,7 +14,7 @@ import {
   MenuItem,
   Chip
 } from '@mui/material';
-import api from '../../features/modules/api';
+import { railwayApi } from '@modules/api';
 import { exportRecommendationPDF } from './recommendationExport';
 import { SingleYearPicker } from '@shared/index';
 
@@ -149,13 +149,13 @@ const RecommendationAdminPrototype = () => {
   const [filterYear, setFilterYear] = useState(null);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
   
-  // Function to fetch recommendation data from API
+  // Function to fetch recommendation data from API using railwayApi
   const fetchRecommendationData = useCallback(async () => {
     setIsTableLoading(true);
     setTableError(null);
     
     try {
-      const response = await api.get('/api/add/recommendations');
+      const response = await railwayApi.get('/add/recommendations');
       
       if (response.data.status === 'success') {
         const records = response.data.records || [];
@@ -256,7 +256,7 @@ const RecommendationAdminPrototype = () => {
   const closeAddModal = () => setIsAddModalOpen(false);
   const closeEditModal = () => setIsEditModalOpen(false);
 
-  // Function to save recommendation data to database
+  // Function to save recommendation data to database using railwayApi
   const handleSaveRecommendation = async () => {
     setIsLoading(true);
     
@@ -271,8 +271,8 @@ const RecommendationAdminPrototype = () => {
       
       console.log('Saving recommendation with payload:', payload);
       
-      // Make API request to backend
-      const response = await api.post('/api/add/recommendations', payload);
+      // Make API request to backend using railwayApi
+      const response = await railwayApi.post('/add/recommendations', payload);
       
       if (response.data.status === 'success') {
         setNotification({
@@ -312,7 +312,7 @@ const RecommendationAdminPrototype = () => {
     }
   };
   
-  // Add update function for editing records
+  // Add update function for editing records using railwayApi
   const handleUpdateRecommendation = async () => {
     setIsLoading(true);
     
@@ -327,8 +327,8 @@ const RecommendationAdminPrototype = () => {
       
       console.log('Updating recommendation with payload:', payload);
       
-      // Make API request to backend
-      const response = await api.put(`/api/add/recommendations/${selectedRecord.id}`, payload);
+      // Make API request to backend using railwayApi
+      const response = await railwayApi.put(`/add/recommendations/${selectedRecord.id}`, payload);
       
       if (response.data.status === 'success') {
         setNotification({
@@ -368,13 +368,13 @@ const RecommendationAdminPrototype = () => {
     }
   };
 
-  // Add functionality to delete a record
+  // Add functionality to delete a record using railwayApi
   const handleDeleteRecord = async (recordId) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
     
     setIsLoading(true);
     try {
-      const response = await api.delete(`/api/add/recommendations/${recordId}`);
+      const response = await railwayApi.delete(`/add/recommendations/${recordId}`);
       
       if (response.data.status === 'success') {
         setNotification({

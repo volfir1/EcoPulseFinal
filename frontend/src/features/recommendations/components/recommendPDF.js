@@ -76,87 +76,87 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
     // 5) SWITCH BACK TO BLACK TEXT AFTER HEADER
     doc.setTextColor(0, 0, 0);
     
-    // 6) SUMMARY BOX WITH KEY METRICS
+    // 6) SUMMARY BOX WITH KEY METRICS - IMPROVED 2-COLUMN LAYOUT
     let yPosition = headerHeight + 12;
     
-    // Summary box
+    // Summary box with enhanced styling
     doc.setFillColor(240, 249, 244); // Light green background
     doc.roundedRect(margin, yPosition, contentWidth, 30, 3, 3, 'F');
     
-    // Divider lines for 3 columns
-    const colWidth = contentWidth / 3;
+    // Adjust to 2 columns instead of 3
+    const colWidth = contentWidth / 2;
     doc.setDrawColor(...colors.primary);
     doc.setLineWidth(0.5);
     doc.line(margin + colWidth, yPosition + 5, margin + colWidth, yPosition + 25);
-    doc.line(margin + colWidth * 2, yPosition + 5, margin + colWidth * 2, yPosition + 25);
     
-    // Column 1: Budget
+    // Column 1: Budget - centered content and improved style
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(10);
-    doc.text("Budget", margin + 5, yPosition + 10);
+    doc.setFontSize(11);
+    doc.text("BUDGET", margin + colWidth/2, yPosition + 10, { align: 'center' });
     doc.setFont(undefined, 'normal');
-    doc.setFontSize(12);
-    doc.text(`₱${data.budget.toLocaleString()}`, margin + 5, yPosition + 20);
+    doc.setFontSize(14);
+    doc.text(`₱${data.budget.toLocaleString()}`, margin + colWidth/2, yPosition + 20, { align: 'center' });
     
-    // Column 2: Investment Year
+    // Column 2: Investment Year - centered content and improved style
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(10);
-    doc.text("Investment Year", margin + colWidth + 5, yPosition + 10);
+    doc.setFontSize(11);
+    doc.text("INVESTMENT YEAR", margin + colWidth + colWidth/2, yPosition + 10, { align: 'center' });
     doc.setFont(undefined, 'normal');
-    doc.setFontSize(12);
-    doc.text(`${data.year}`, margin + colWidth + 5, yPosition + 20);
-    
-    // Column 3: Location
-    doc.setFont(undefined, 'bold');
-    doc.setFontSize(10);
-    doc.text("Location", margin + colWidth * 2 + 5, yPosition + 10);
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(12);
-    doc.text(`${data.location}`, margin + colWidth * 2 + 5, yPosition + 20);
+    doc.setFontSize(14);
+    doc.text(`${data.year}`, margin + colWidth + colWidth/2, yPosition + 20, { align: 'center' });
     
     yPosition += 30 + 10; // Box height + spacing
     
-    // 7) RENEWABLE ENERGY POTENTIAL SECTION
-    // Section title
+    // 7) RENEWABLE ENERGY POTENTIAL SECTION - IMPROVED STYLING
+    // Section title with gradient-like effect
     doc.setFillColor(...colors.primary);
-    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
-    doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
-    doc.text('RENEWABLE ENERGY POTENTIAL', margin + 5, yPosition + 5.5);
-    doc.setTextColor(0, 0, 0);
-    yPosition += 12;
-    
-    // Content box
-    doc.setFillColor(255, 250, 240); // Light yellow background
-    doc.roundedRect(margin, yPosition, contentWidth, 26, 2, 2, 'F');
-    
-    // Solar icon
+    doc.roundedRect(margin, yPosition, contentWidth, 10, 3, 3, 'F');
+    // Add a subtle secondary color accent bar
     doc.setFillColor(...colors.secondary);
-    doc.circle(margin + 12, yPosition + 13, 4, 'F');
+    doc.roundedRect(margin, yPosition, 5, 10, 3, 0, 'F');
     
-    // Solar content
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
-    doc.text('Solar', margin + 25, yPosition + 10);
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text('RENEWABLE ENERGY POTENTIAL', margin + 12, yPosition + 6.5);
+    doc.setTextColor(0, 0, 0);
+    yPosition += 14;
+    
+    // Content box with improved styling
+    doc.setFillColor(255, 250, 240); // Light yellow background
+    doc.roundedRect(margin, yPosition, contentWidth, 30, 2, 2, 'F');
+    
+    // Enhanced solar icon with outline
+    doc.setFillColor(...colors.secondary);
+    doc.circle(margin + 15, yPosition + 15, 6, 'F');
+    doc.setDrawColor(200, 150, 0);
+    doc.circle(margin + 15, yPosition + 15, 6.5, 'S');
+    
+    // Solar content with improved layout
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(12);
+    doc.text('Solar Energy', margin + 30, yPosition + 12);
     
     doc.setFont(undefined, 'normal');
-    doc.setFontSize(9);
-    doc.text(`Potential: ${data.solarPotential}`, margin + 25, yPosition + 18);
-    doc.text('Average 5.5 kWh/m²/day', margin + 25, yPosition + 24);
+    doc.setFontSize(10);
+    doc.text(`Potential: ${data.solarPotential}`, margin + 30, yPosition + 20);
+    doc.text('Average 5.5 kWh/m²/day', margin + 30, yPosition + 26);
     
-    yPosition += 26 + sectionSpacing;
+    yPosition += 30 + sectionSpacing;
     
-    // 8) FUTURE PROJECTIONS SECTION
-    // Section title
+    // 8) FUTURE PROJECTIONS SECTION - IMPROVED STYLING
+    // Section title with accent bar
     doc.setFillColor(...colors.accent);
-    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+    doc.roundedRect(margin, yPosition, contentWidth, 10, 3, 3, 'F');
+    doc.setFillColor(...colors.secondary);
+    doc.roundedRect(margin, yPosition, 5, 10, 3, 0, 'F');
+    
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
-    doc.text('FUTURE PROJECTIONS', margin + 5, yPosition + 5.5);
+    doc.text('FUTURE PROJECTIONS', margin + 12, yPosition + 6.5);
     doc.setTextColor(0, 0, 0);
-    yPosition += 12;
+    yPosition += 14;
     
     // Add table for future projections
     const projectionData = [];
@@ -211,22 +211,25 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
     
     yPosition = doc.autoTable.previous.finalY + sectionSpacing;
     
-    // 9) ENERGY PRODUCTION SECTION
+    // 9) ENERGY PRODUCTION SECTION - IMPROVED STYLING
     // Check if we need a page break
     if (yPosition > pageHeight - 100) {
       doc.addPage();
       yPosition = 20;
     }
     
-    // Section title
+    // Section title with accent bar
     doc.setFillColor(...colors.secondary);
-    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+    doc.roundedRect(margin, yPosition, contentWidth, 10, 3, 3, 'F');
+    doc.setFillColor(...colors.primary);
+    doc.roundedRect(margin, yPosition, 5, 10, 3, 0, 'F');
+    
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
-    doc.text('ESTIMATED YEARLY ENERGY PRODUCTION', margin + 5, yPosition + 5.5);
+    doc.text('ESTIMATED YEARLY ENERGY PRODUCTION', margin + 12, yPosition + 6.5);
     doc.setTextColor(0, 0, 0);
-    yPosition += 12;
+    yPosition += 14;
     
     // Try to capture the energy production chart/content
     if (refs && refs.chartRef && refs.chartRef.current) {
@@ -273,22 +276,25 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
     
     yPosition += 10;
     
-    // 10) COST-BENEFIT ANALYSIS
+    // 10) COST-BENEFIT ANALYSIS - IMPROVED STYLING
     // Check if we need a page break
     if (yPosition > pageHeight - 120) {
       doc.addPage();
       yPosition = 20;
     }
     
-    // Section title
+    // Section title with accent bar
     doc.setFillColor(...colors.primary);
-    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+    doc.roundedRect(margin, yPosition, contentWidth, 10, 3, 3, 'F');
+    doc.setFillColor(...colors.secondary);
+    doc.roundedRect(margin, yPosition, 5, 10, 3, 0, 'F');
+    
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
-    doc.text('COST-BENEFIT ANALYSIS', margin + 5, yPosition + 5.5);
+    doc.text('COST-BENEFIT ANALYSIS', margin + 12, yPosition + 6.5);
     doc.setTextColor(0, 0, 0);
-    yPosition += 12;
+    yPosition += 14;
     
     // Financial metrics as cards in 2 columns
     const financialItems = data.costBenefitAnalysis?.filter(item => 
@@ -298,38 +304,38 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
       // Get only financial metrics (exclude energy production)
       const halfWidth = contentWidth / 2 - 4;
       
-      // Create side-by-side boxes
+      // Create side-by-side boxes with improved styling
       doc.setFillColor(242, 247, 243); // Light green
-      doc.roundedRect(margin, yPosition, halfWidth, 40, 2, 2, 'F');
-      doc.roundedRect(margin + halfWidth + 8, yPosition, halfWidth, 40, 2, 2, 'F');
+      doc.roundedRect(margin, yPosition, halfWidth, 45, 3, 3, 'F');
+      doc.roundedRect(margin + halfWidth + 8, yPosition, halfWidth, 45, 3, 3, 'F');
       
-      // Box 1 content
+      // Box 1 content - centered and improved
       if (financialItems[0]) {
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(financialItems[0].label, margin + 5, yPosition + 10);
+        doc.text(financialItems[0].label, margin + halfWidth/2, yPosition + 12, { align: 'center' });
         doc.setFont(undefined, 'normal');
         
-        doc.setFontSize(14);
+        doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
-        doc.text(financialItems[0].value, margin + 5, yPosition + 25);
+        doc.text(financialItems[0].value, margin + halfWidth/2, yPosition + 28, { align: 'center' });
         doc.setFont(undefined, 'normal');
       }
       
-      // Box 2 content
+      // Box 2 content - centered and improved
       if (financialItems[1]) {
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text(financialItems[1].label, margin + halfWidth + 13, yPosition + 10);
+        doc.text(financialItems[1].label, margin + halfWidth + 8 + halfWidth/2, yPosition + 12, { align: 'center' });
         doc.setFont(undefined, 'normal');
         
-        doc.setFontSize(14);
+        doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
-        doc.text(financialItems[1].value, margin + halfWidth + 13, yPosition + 25);
+        doc.text(financialItems[1].value, margin + halfWidth + 8 + halfWidth/2, yPosition + 28, { align: 'center' });
         doc.setFont(undefined, 'normal');
       }
       
-      yPosition += 40 + sectionSpacing;
+      yPosition += 45 + sectionSpacing;
     } else {
       // Fallback if no financial data - show table with cost-benefit data
       const costBenefitData = [];
@@ -368,29 +374,32 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
       yPosition = doc.autoTable.previous.finalY + sectionSpacing;
     }
     
-    // 11) RECOMMENDATIONS SECTION
+    // 11) RECOMMENDATIONS SECTION - IMPROVED VISUAL DESIGN
     // Check if we need a page break
     if (yPosition > pageHeight - 80) {
       doc.addPage();
       yPosition = 20;
     }
     
-    // Section title
+    // Section title with accent bar
     doc.setFillColor(...colors.primary);
-    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+    doc.roundedRect(margin, yPosition, contentWidth, 10, 3, 3, 'F');
+    doc.setFillColor(...colors.secondary);
+    doc.roundedRect(margin, yPosition, 5, 10, 3, 0, 'F');
+    
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
-    doc.text('RECOMMENDATIONS', margin + 5, yPosition + 5.5);
+    doc.text('KEY RECOMMENDATIONS', margin + 12, yPosition + 6.5);
     doc.setTextColor(0, 0, 0);
-    yPosition += 12;
+    yPosition += 14;
     
-    // Recommendations box
-    doc.setFillColor(242, 247, 243); // Light green
-    doc.roundedRect(margin, yPosition, contentWidth, 42, 2, 2, 'F');
+    // Recommendations box with improved styling
+    doc.setFillColor(242, 247, 243); // Light green background
+    doc.roundedRect(margin, yPosition, contentWidth, 50, 3, 3, 'F');
     
-    // Add recommendations
-    doc.setFontSize(9);
+    // Add recommendations with enhanced styling
+    doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     
     // Sample recommendations
@@ -401,19 +410,28 @@ export const generateRecommendationsPDF = async (data, refs, toast) => {
       "Implement regular maintenance schedule to ensure optimal performance."
     ];
     
-    let bulletY = yPosition + 8;
-    recommendations.forEach((rec) => {
-      // Green bullet points
+    let bulletY = yPosition + 10;
+    recommendations.forEach((rec, index) => {
+      // Styled bullet points with numbering
       doc.setFillColor(...colors.primary);
-      doc.circle(margin + 5, bulletY, 1.5, 'F');
+      doc.circle(margin + 8, bulletY, 2.5, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text((index + 1).toString(), margin + 8, bulletY + 2.5, { align: 'center' });
       
-      // Recommendation text - with auto-wrapping for long lines
-      const splitText = doc.splitTextToSize(rec, contentWidth - 15);
-      doc.text(splitText, margin + 10, bulletY);
-      bulletY += 10;
+      // Reset text color and add recommendation text
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      
+      // Recommendation text with auto-wrapping for long lines
+      const splitText = doc.splitTextToSize(rec, contentWidth - 20);
+      doc.text(splitText, margin + 16, bulletY + 3);
+      bulletY += splitText.length > 1 ? 10 + (splitText.length - 1) * 5 : 12;
     });
     
-    // 12) FOOTER
+    // 12) FOOTER - IMPROVED DESIGN
     // Add a divider line
     yPosition = pageHeight - 15;
     doc.setDrawColor(...colors.primary);

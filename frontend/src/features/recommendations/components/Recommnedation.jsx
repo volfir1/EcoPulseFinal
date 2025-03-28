@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import api from '@features/modules/api';
+import { railwayApi } from '@modules/api';
 import { 
   Button, 
   Card, 
@@ -68,7 +68,8 @@ const EnergyRecommendations = () => {
         // Convert budget to number if it's a string
         const budgetNum = typeof budget === 'string' ? parseInt(budget, 10) : budget;
         
-        const response = await api.get('/api/solar_recommendations', {
+        // Use railwayApi instead of api
+        const response = await railwayApi.get('/solar_recommendations', {
           params: { year: year, budget: budgetNum }
         });
         
