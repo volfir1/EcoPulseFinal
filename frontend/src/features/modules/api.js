@@ -8,7 +8,7 @@ const RAILWAY_API_URL = process.env.REACT_APP_RAILWAY_API_URL || import.meta.env
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true, // Important for cookies/auth
-  timeout: 30000, // 30 seconds timeout
+  timeout: 10, // 30 seconds timeout
   headers: {
     'Content-Type': 'application/json'
   }
