@@ -14,7 +14,7 @@ const createEnergyStore = (energyType) => {
   const configs = {
     solar: {
       color: '#FFB800', // Solar yellow
-      endpoint: '/api/predictions/solar/',
+      endpoint: '/predictions/solar/',
       fileName: 'Solar_Power_Generation_Summary.pdf',
       title: 'Solar Power Generation Chart',
       tableTitle: 'Solar Power Generation Data Table',
@@ -32,7 +32,7 @@ const createEnergyStore = (energyType) => {
     },
     hydro: {
       color: '#2E90E5', // Hydro blue
-      endpoint: '/api/predictions/hydro/',
+      endpoint: '/predictions/hydro/',
       fileName: 'Hydropower_Generation_Summary.pdf',
       title: 'Hydropower Generation Chart',
       tableTitle: 'Hydropower Generation Data Table',
@@ -50,7 +50,7 @@ const createEnergyStore = (energyType) => {
     },
     wind: {
       color: '#64748B', // Wind slate
-      endpoint: '/api/predictions/wind/',
+      endpoint: '/predictions/wind/',
       fileName: 'Wind_Power_Generation_Summary.pdf',
       title: 'Wind Power Generation Chart',
       tableTitle: 'Wind Power Generation Data Table',
@@ -68,7 +68,7 @@ const createEnergyStore = (energyType) => {
     },
     biomass: {
       color: '#16A34A', // Biomass green
-      endpoint: '/api/predictions/biomass/',
+      endpoint: '/predictions/biomass/',
       fileName: 'Biomass_Power_Generation_Summary.pdf',
       title: 'Biomass Generation Chart',
       tableTitle: 'Biomass Generation Data Table',
@@ -87,7 +87,7 @@ const createEnergyStore = (energyType) => {
     // Add geothermal configuration
     geothermal: {
       color: '#FF6B6B', // Geothermal red
-      endpoint: '/api/predictions/geothermal/',
+      endpoint: '/predictions/geothermal/',
       fileName: 'Geothermal_Power_Generation_Summary.pdf',
       title: 'Geothermal Generation Chart',
       tableTitle: 'Geothermal Generation Data Table',
