@@ -289,7 +289,7 @@ const EnergySharing = () => {
         setError(null);
         
         // Using Railway API instead of local API
-        const response = await railwayApi.get('/api/peertopeer/predictions', {
+        const response = await railwayApi.get('/peertopeer/predictions', {
           params: {
             year: selectedYear
           }
@@ -418,7 +418,7 @@ const EnergySharing = () => {
     setTimeout(() => {
       const fetchDataOnRefresh = async () => {
         try {
-          const response = await railwayApi.get('/api/peertopeer/predictions', {
+          const response = await railwayApi.get('/peertopeer/predictions', {
             params: { year: selectedYear }
           });
           
