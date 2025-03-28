@@ -289,7 +289,7 @@ const EnergySharing = () => {
         setError(null);
         
         // Using Railway API instead of local API
-        const response = await railwayApi.get('/peertopeer/predictions', {
+        const response = await railwayApi.get('/peertopeer/', {
           params: {
             year: selectedYear
           }
@@ -418,7 +418,7 @@ const EnergySharing = () => {
     setTimeout(() => {
       const fetchDataOnRefresh = async () => {
         try {
-          const response = await railwayApi.get('/peertopeer/predictions', {
+          const response = await railwayApi.get('/peertopeer/', {
             params: { year: selectedYear }
           });
           
@@ -452,6 +452,23 @@ const EnergySharing = () => {
           <Typography variant="h4" fontWeight={600} color="primary.main" sx={{ display: 'flex', alignItems: 'center' }}>
             <Zap size={28} style={{ marginRight: 12 }} />
             Peer-to-Peer Energy Sharing
+              
+            <IconButton 
+              color="primary" 
+              sx={{ 
+                bgcolor: '#2e7d32',
+                color: 'white',
+                width: '40px',
+                height: '40px',
+                left: '10px',
+                '&:hover': { bgcolor: '#1b5e20' },
+                
+              }}
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw size={20} />
+            </IconButton>
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -461,21 +478,7 @@ const EnergySharing = () => {
                 onYearChange={handleYearChange}
               />
             </Box>
-            
-            <IconButton 
-              color="primary" 
-              sx={{ 
-                bgcolor: '#2e7d32',
-                color: 'white',
-                width: '40px',
-                height: '40px',
-                '&:hover': { bgcolor: '#1b5e20' }
-              }}
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw size={20} />
-            </IconButton>
+          
           </Box>
         </Box>
         
