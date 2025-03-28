@@ -1,89 +1,67 @@
 import axios from 'axios';
 
-// Determine the base URLs for each backend
-const NODE_BACKEND_URL = import.meta.env.VITE_API_URL|| 'https://ecopulsebackend-1.onrender.com/api';
-const DJANGO_BACKEND_URL = import.meta.env.VITE_PY_URL || 'https://django-server-production-dac6.up.railway.app'; // Update this
+// Get the API URL from env or use fallbacks
+const API_URL = process.env.REACT_APP_API_URL || import.meta.env.VITE_API_URL || 'https://ecopulsebackend-1.onrender.com';
+const RAILWAY_API_URL = process.env.REACT_APP_RAILWAY_API_URL || import.meta.env.VITE_RAILWAY_API_URL || 'https://ecopulse.up.railway.app';
 
-// Create axios instance with proper configuration
+// Create an instance of axios for the primary API
 const api = axios.create({
-  baseURL: DJANGO_BACKEND_URL,  // Default to Django backend for prediction APIs
-  timeout: 30000, // Increase timeout to 30 seconds
-  withCredentials: true, // Required for CORS when using credentials
+  baseURL: API_URL,
+  withCredentials: true, // Important for cookies/auth
+  timeout: 30000, // 30 seconds timeout
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Content-Type': 'application/json'
   }
 });
 
-// Also create a Node.js backend API instance
+// Create an instance for Node.js backend
 const nodeApi = axios.create({
-  baseURL: NODE_BACKEND_URL,
-  timeout: 30000,
+  baseURL: API_URL,
   withCredentials: true,
+  timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Content-Type': 'application/json'
   }
 });
 
-// Add request interceptor to handle tokens if needed
-api.interceptors.request.use(
-  (config) => {
-    // Get token from localStorage if using JWT authentication
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// Create a Railway instance as fallback
+const railwayApi = axios.create({
+  baseURL: RAILWAY_API_URL,
+  withCredentials: true,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
   }
-);
+});
 
-// Add response interceptor to handle common errors
-api.interceptors.response.use(
-  (response) => {
-    // Handle token refresh if your API returns a new token
-    if (response.data && response.data.newToken) {
-      localStorage.setItem('token', response.data.newToken);
-    }
-    return response;
-  },
-  (error) => {
-    // Handle specific error cases
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout - the server took too long to respond');
-    } else if (error.code === 'ERR_NETWORK') {
-      console.error(`Network error - cannot connect to the backend at ${error.config?.baseURL || 'unknown'}`);
-    } else if (error.response && error.response.status === 401) {
-      console.error('Authentication error - you may need to log in again');
-      // Optional: Redirect to login page or clear tokens
-      // localStorage.removeItem('token');
-    } else {
-      console.error('API Error:', error.message || 'Unknown error');
+// Error handling and retry logic for the nodeApi
+nodeApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // If it's a CORS or network error, try the Railway API as fallback
+    if (error.code === 'ERR_NETWORK' || 
+        (error.response && error.response.status === 0) ||
+        error.message === 'Network Error') {
+      
+      console.log('Network error with primary API, trying Railway fallback...');
+      
+      try {
+        // Get the original request config
+        const originalRequest = error.config;
+        
+        // Make the same request to Railway API
+        const fallbackResponse = await railwayApi(originalRequest);
+        console.log('Successfully used Railway API fallback');
+        return fallbackResponse;
+      } catch (fallbackError) {
+        console.error('Railway API fallback also failed:', fallbackError);
+        return Promise.reject(error); // Return original error if fallback also fails
+      }
     }
     
     return Promise.reject(error);
   }
 );
-
-// Apply the same interceptors to nodeApi
-nodeApi.interceptors.request.use(
-  api.interceptors.request.handlers[0].fulfilled,
-  api.interceptors.request.handlers[0].rejected
-);
-
-nodeApi.interceptors.response.use(
-  api.interceptors.response.handlers[0].fulfilled,
-  api.interceptors.response.handlers[0].rejected
-);
-
-console.log(`Django API configured to use backend at: ${DJANGO_BACKEND_URL}`);
-console.log(`Node.js API configured to use backend at: ${NODE_BACKEND_URL}`);
-
-// Export the main API instance as default for backward compatibility
+s
+export { nodeApi, railwayApi };
 export default api;
-
-// Also export the Node.js API instance for specific Node.js backend calls
-export { nodeApi };
