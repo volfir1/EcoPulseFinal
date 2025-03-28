@@ -13,8 +13,8 @@ const authService = {
   register: async (userData) => {
     try {
       console.log('Sending registration data:', userData);
-      console.log('Sending to URL:', nodeApi.defaults.baseURL + '/api/auth/register');
-      const response = await nodeApi.post('/api/auth/register', userData);
+      console.log('Sending to URL:', nodeApi.defaults.baseURL + 'auth/register');
+      const response = await nodeApi.post('/auth/register', userData);
       
       // Return data needed for verification
       return { 
@@ -36,7 +36,7 @@ const authService = {
     try {
       console.log('Attempting login for:', email);
       
-      const response = await nodeApi.post('/api/auth/login', { email, password });
+      const response = await nodeApi.post('/auth/login', { email, password });
       
       // Log the response data
       console.log('Parsed login response:', response.data);
