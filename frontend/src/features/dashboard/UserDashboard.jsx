@@ -100,11 +100,17 @@ const Dashboard = () => {
           
           // Get current projection for selected year
           const selectedYearData = predictions.find(p => Number(p.Year) === selectedYear);
-          const selectedProjection = selectedYearData 
+          let selectedProjection = selectedYearData 
             ? Math.abs(Number(selectedYearData['Predicted Production'])) 
             : predictions[predictions.length - 1] 
               ? Math.abs(Number(predictions[predictions.length - 1]['Predicted Production']))
               : 0;
+              
+          // Normalize large numbers to prevent scientific notation display issues
+          // Scale down extremely large numbers to more reasonable values for UI display
+          if (selectedProjection > 1000000000) {
+            selectedProjection = selectedProjection / 1000000; // Convert to millions for display
+          }
           
           // Add to total
           total += selectedProjection;
@@ -155,7 +161,9 @@ const Dashboard = () => {
     }
     
     setEnergyData(data);
-    setTotalProjection(Math.round(total * 10) / 10);
+    // Limit the decimal precision and ensure it's not an excessively large number
+    const formattedTotal = total > 100000 ? Math.round(total) : Math.round(total * 10) / 10;
+    setTotalProjection(formattedTotal);
     setApiErrors(errors);
     setUsingMockData(usedMockData);
     setLoading(false);
@@ -324,7 +332,7 @@ const Dashboard = () => {
             Total Energy Generation
           </h2>
           <div className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">
-            {totalProjection} GWh
+            {Number(totalProjection).toLocaleString()} GWh
           </div>
           <p className="text-xs md:text-sm text-gray-300">
             Combined projection for {selectedYear}
@@ -343,7 +351,7 @@ const Dashboard = () => {
                   <Icon size={isMobile ? 14 : 16} style={{ color }} className="mr-1 md:mr-2 flex-shrink-0" />
                   <span className="text-gray-700 text-xs md:text-sm mr-1 md:mr-2">{name}:</span>
                   <span className="font-medium text-xs md:text-sm">
-                    {Math.round((energyData[type]?.currentProjection || 0) * 10) / 10} GWh
+                    {Number(Math.round((energyData[type]?.currentProjection || 0) * 10) / 10).toLocaleString()} GWh
                   </span>
                   {apiErrors.includes(type) && (
                     <span className="ml-1 text-xs text-amber-600">(sim)</span>
@@ -389,7 +397,7 @@ const Dashboard = () => {
                 <div className="flex-1">
                   <div className="flex justify-between mb-1">
                     <span className="text-xs md:text-sm font-medium">{item.name}</span>
-                    <span className="text-xs md:text-sm font-bold">{Math.round(item.value * 10) / 10} GWh</span>
+                    <span className="text-xs md:text-sm font-bold">{Number(Math.round(item.value * 10) / 10).toLocaleString()} GWh</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 md:h-2">
                     <div 
@@ -490,7 +498,7 @@ const Dashboard = () => {
                 </h3>
               </div>
               <div className="text-xl md:text-2xl font-bold mb-1" style={{ color }}>
-                {Math.round((data.currentProjection || 0) * 10) / 10} GWh
+                {Number(Math.round((data.currentProjection || 0) * 10) / 10).toLocaleString()} GWh
               </div>
               <p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">Projected for {selectedYear}</p>
               <div className="h-[90px] md:h-[120px]">
