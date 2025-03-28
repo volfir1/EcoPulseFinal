@@ -193,9 +193,7 @@ const Sidebar = () => {
         />
       </List>
       
-      <Box sx={logoutContainerStyles}>
-        <LogoutButton open={isMobile ? true : open} />
-      </Box>
+     
     </Box>
   );
 
