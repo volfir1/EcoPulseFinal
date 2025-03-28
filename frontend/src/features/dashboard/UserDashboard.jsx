@@ -18,11 +18,11 @@ import { railwayApi } from '@modules/api'; // Update the path to match your proj
 
 // Define energy types and their corresponding icons
 const energyTypes = [
-  { type: 'solar', icon: Sun, color: '#FFB800', name: 'Solar', endpoint: '/api/predictions/solar/' },
-  { type: 'hydro', icon: Droplets, color: '#2E90E5', name: 'Hydro', endpoint: '/api/predictions/hydro/' },
-  { type: 'wind', icon: Wind, color: '#64748B', name: 'Wind', endpoint: '/api/predictions/wind/' },
-  { type: 'biomass', icon: Leaf, color: '#16A34A', name: 'Biomass', endpoint: '/api/predictions/biomass/' },
-  { type: 'geothermal', icon: Thermometer, color: '#FF6B6B', name: 'Geothermal', endpoint: '/api/predictions/geothermal/' }
+  { type: 'solar', icon: Sun, color: '#FFB800', name: 'Solar', endpoint: '/predictions/solar/' },
+  { type: 'hydro', icon: Droplets, color: '#2E90E5', name: 'Hydro', endpoint: '/predictions/hydro/' },
+  { type: 'wind', icon: Wind, color: '#64748B', name: 'Wind', endpoint: '/predictions/wind/' },
+  { type: 'biomass', icon: Leaf, color: '#16A34A', name: 'Biomass', endpoint: '/predictions/biomass/' },
+  { type: 'geothermal', icon: Thermometer, color: '#FF6B6B', name: 'Geothermal', endpoint: '/predictions/geothermal/' }
 ];
 
 const Dashboard = () => {
@@ -216,7 +216,7 @@ const Dashboard = () => {
       
       // Attempt to use Railway API for export
       try {
-        const response = await railwayApi.post('/api/export/dashboard', {
+        const response = await railwayApi.post('/export/dashboard', {
           year: selectedYear,
           data: energyData
         }, {
