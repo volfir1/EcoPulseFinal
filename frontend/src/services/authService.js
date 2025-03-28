@@ -5,7 +5,7 @@ import {
   getRedirectResult as firebaseGetRedirectResult
 } from 'firebase/auth';
 import { auth } from '../features/auth/firebase/firebase';
-import api, { nodeApi } from './api'; // Import both API instances
+import api, { nodeApi } from '@modules/api'; // Import both API instances
 
 let currentAuthRequest = null;
 
