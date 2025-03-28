@@ -1,5 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import api from '../../features/modules/api';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Dialog, 
   DialogTitle, 
@@ -20,8 +19,9 @@ import {
 // Import the export function
 import { exportPeerToPeerPDF } from './peerDownload';
 
-// Import custom hook
+// Import custom hooks
 import { usePeerForm } from './peerUtil';
+import { usePeerToPeer } from './hook';
 
 // Prototype only - this would normally be imported
 const Button = ({ children, className, variant, onClick, disabled, icon }) => (
@@ -85,25 +85,35 @@ const HighlightText = ({ text, highlight }) => {
 };
 
 const PeerToPeerAdminPrototype = () => {
+  // Use the peer to peer custom hook
+  const {
+    isLoading,
+    error,
+    notification,
+    searchQuery,
+    sortConfig,
+    displayData,
+    tableData,
+    fetchData,
+    handleDeleteRecord,
+    handleSaveRecord,
+    handleNotificationClose,
+    requestSort,
+    handleSearchChange,
+    clearSearch
+  } = usePeerToPeer();
+
   // State for modal and form data
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState({});
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isEditing, setIsEditing] = useState(false);
-  const [notification, setNotification] = useState({ open: false, message: '', type: 'info' });
   
-  // State for data from MongoDB
-  const [tableData, setTableData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Use the form custom hook
+  const { formValues, setFormValue, resetForm } = usePeerForm();
   
-  // Search and sort state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'year', direction: 'asc' });
+  // Search input ref for focus
   const searchInputRef = useRef(null);
-  
-  // Use the custom hook for form state management
-  const { formValues, setFormValue, resetForm, handleSubmit } = usePeerForm();
   
   // Keyboard shortcuts for search
   useEffect(() => {
@@ -123,149 +133,9 @@ const PeerToPeerAdminPrototype = () => {
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [searchQuery]);
+  }, [searchQuery, clearSearch]);
   
-  // Fetch data from MongoDB via API with retry logic
-  const fetchData = useCallback(async (retryCount = 0) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log('Fetching data for all available years');
-      
-      // Make a request to retrieve data from MongoDB without year range parameters
-      const response = await api.get('/api/peertopeer/records');
-      
-      console.log('MongoDB data response:', response.data);
-      
-      if (response.data.status === 'success') {
-        const records = response.data.records || [];
-        console.log(`Received ${records.length} records from MongoDB`);
-        
-        if (records.length > 0) {
-          // Process the MongoDB data for table display
-          const processedData = processMongoDataForTable(records);
-          console.log('Processed data:', processedData);
-          setTableData(processedData);
-        } else {
-          setError('No data available in the database');
-        }
-      } else {
-        setError(`Error: ${response.data.message || 'Unknown error'}`);
-      }
-    } catch (err) {
-      console.error('Error fetching peer-to-peer data:', err);
-      
-      // Retry logic - only retry for network/timeout errors up to 2 times
-      if ((err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') && retryCount < 2) {
-        console.log(`Retrying fetch attempt ${retryCount + 1}...`);
-        setTimeout(() => {
-          fetchData(retryCount + 1);
-        }, 2000); // Wait 2 seconds before retry
-        return;
-      }
-      
-      // Show user-friendly error message based on error type
-      if (err.code === 'ECONNABORTED') {
-        setError(`Request timed out. The server is taking too long to respond. Please check if your backend server is running correctly.`);
-      } else if (err.code === 'ERR_NETWORK') {
-        setError(`Network error. Unable to connect to the server. Please make sure your Django server is running at http://127.0.0.1:8000`);
-      } else {
-        setError(`Error fetching data: ${err.message}`);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-    
-  // Improved function to process MongoDB data for table display
-  const processMongoDataForTable = (records) => {
-    // Extract unique years from records
-    const years = [...new Set(records.map(record => record.Year || record.year))].sort();
-    
-    // Create a consolidated record for each year
-    return years.map(year => {
-      // Get all records for this year
-      const yearRecords = records.filter(r => (r.Year || r.year) === year);
-      
-      // Create base record object
-      const consolidatedRecord = {
-        _id: yearRecords[0]._id, // Use first record's ID for reference
-        year: year,
-        cebuTotal: 0,
-        negrosTotal: 0,
-        panayTotal: 0,
-        leyteSamarTotal: 0,
-        boholTotal: 0,
-        visayasTotal: 0,
-        visayasConsumption: 0,
-        solarCost: 0,
-        meralcoRate: 0,
-        allRecords: yearRecords // Store all related records for this year
-      };
-      
-      // Extract specific values from the records
-      yearRecords.forEach(record => {
-        // Helper function to safely get numeric values
-        const getNumericValue = (value) => {
-          if (value === null || value === undefined) return 0;
-          if (typeof value === 'number') return value;
-          if (typeof value === 'string') {
-            const parsed = parseFloat(value.replace(/,/g, ''));
-            return isNaN(parsed) ? 0 : parsed;
-          }
-          return 0;
-        };
-        
-        // Update consolidated record based on data in individual record
-        Object.keys(record).forEach(key => {
-          // Handle Cebu data
-          if (key === 'Cebu Total Power Generation (GWh)') {
-            consolidatedRecord.cebuTotal = getNumericValue(record[key]);
-          }
-          // Handle Negros data
-          else if (key === 'Negros Total Power Generation (GWh)') {
-            consolidatedRecord.negrosTotal = getNumericValue(record[key]);
-          }
-          // Handle Panay data
-          else if (key === 'Panay Total Power Generation (GWh)') {
-            consolidatedRecord.panayTotal = getNumericValue(record[key]);
-          }
-          // Handle Leyte-Samar data
-          else if (key === 'Leyte-Samar Total Power Generation (GWh)') {
-            consolidatedRecord.leyteSamarTotal = getNumericValue(record[key]);
-          }
-          // Handle Bohol data
-          else if (key === 'Bohol Total Power Generation (GWh)') {
-            consolidatedRecord.boholTotal = getNumericValue(record[key]);
-          }
-          // Handle Visayas data
-          else if (key === 'Visayas Total Power Generation (GWh)') {
-            consolidatedRecord.visayasTotal = getNumericValue(record[key]);
-          }
-          else if (key === 'Visayas Total Power Consumption (GWh)') {
-            consolidatedRecord.visayasConsumption = getNumericValue(record[key]);
-          }
-          // Handle recommendation parameters
-          // else if (key === 'Solar Cost (PHP/W)') {
-          //   consolidatedRecord.solarCost = getNumericValue(record[key]);
-          // }
-          // else if (key === 'MERALCO Rate (PHP/kWh)') {
-          //   consolidatedRecord.meralcoRate = getNumericValue(record[key]);
-          // }
-        });
-      });
-      
-      return consolidatedRecord;
-    });
-  };
-    
-  // Fetch data when component mounts
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-    
-  // Improved openModal function to correctly populate form values
+  // Open modal to edit a record
   const openModal = (record = {}) => {
     console.log('Opening modal with record:', record);
     setSelectedRecord(record);
@@ -346,6 +216,10 @@ const PeerToPeerAdminPrototype = () => {
         // Visayas values
         populateField("Visayas Total Power Generation (GWh)", rec["Visayas Total Power Generation (GWh)"]);
         populateField("Visayas Total Power Consumption (GWh)", rec["Visayas Total Power Consumption (GWh)"]);
+        
+        // Solar cost and MERALCO rates
+        populateField("Solar Cost (PHP/W)", rec["Solar Cost (PHP/W)"]);
+        populateField("MERALCO Rate (PHP/kWh)", rec["MERALCO Rate (PHP/kWh)"]);
       });
       
       // Log populated form values for debugging
@@ -353,45 +227,6 @@ const PeerToPeerAdminPrototype = () => {
     }
     
     setIsModalOpen(true);
-  };
-    
-  // Handle delete functionality
-  const handleDeleteRecord = useCallback(async (recordId) => {
-    if (!window.confirm('Are you sure you want to delete this record?')) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await api.delete(`/api/peertopeer/records/${recordId}`);
-      
-      if (response.data.status === 'success') {
-        setNotification({
-          open: true,
-          message: 'Record deleted successfully!',
-          type: 'success'
-        });
-        fetchData();
-      } else {
-        setNotification({
-          open: true,
-          message: `Error: ${response.data.message}`,
-          type: 'error'
-        });
-      }
-    } catch (err) {
-      console.error('Error deleting record:', err);
-      setNotification({
-        open: true,
-        message: `Error: ${err.message}`,
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchData]);
-
-  // Handle notification close
-  const handleNotificationClose = () => {
-    setNotification(prev => ({ ...prev, open: false }));
   };
 
   const handleOpenAddModal = useCallback(() => {
@@ -413,75 +248,26 @@ const PeerToPeerAdminPrototype = () => {
     setFormValue(field, event.target.value);
   }, [setFormValue]);
 
-  // Updated handleSaveRecord function to correctly handle MongoDB records
-  const handleSaveRecord = useCallback(async () => {
-    setIsLoading(true);
-    
+  const handleSubmitRecord = useCallback(async () => {
+    const success = await handleSaveRecord(isEditing, selectedRecord, formValues, selectedYear);
+    if (success) {
+      setIsModalOpen(false);
+    }
+  }, [handleSaveRecord, isEditing, selectedRecord, formValues, selectedYear]);
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
     try {
-      // Build the payload with current form values
-      const payload = {
-        Year: selectedYear,
-        ...formValues
-      };
-      
-      console.log('Saving record with payload:', payload);
-      
-      let response;
-      if (isEditing && selectedRecord._id) {
-        // Update existing record
-        response = await api.put(`/api/peertopeer/records/${selectedRecord._id}`, payload);
-      } else {
-        // Create new record
-        response = await api.post('/api/peertopeer/records', payload);
+      const success = await exportPeerToPeerPDF(displayData);
+      if (success) {
+        handleNotificationClose();
+        setTimeout(() => {
+          handleNotificationClose();
+        }, 100);
       }
-      
-      if (response.data.status === 'success') {
-        setNotification({
-          open: true,
-          message: isEditing ? 'Record updated successfully!' : 'Record created successfully!',
-          type: 'success'
-        });
-        setIsModalOpen(false);
-        // Refresh data after successful save
-        fetchData();
-      } else {
-        setNotification({
-          open: true,
-          message: `Error: ${response.data.message || 'Unknown error'}`,
-          type: 'error'
-        });
-      }
-    } catch (err) {
-      console.error('Error in handleSaveRecord:', err);
-      setNotification({
-        open: true,
-        message: `Error: ${err.message}`,
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Export error:', error);
     }
-  }, [formValues, isEditing, selectedRecord._id, selectedYear, fetchData]);
-
-  // Search handlers
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  };
-
-  // Sorting handlers
-  const requestSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
   };
 
   // Function to get sort icon
@@ -509,74 +295,6 @@ const PeerToPeerAdminPrototype = () => {
     );
   };
 
-  // Filtering and sorting functions
-  const getFilteredData = () => {
-    if (!searchQuery.trim()) {
-      return tableData;
-    }
-    
-    const query = searchQuery.toLowerCase().trim();
-    
-    return tableData.filter(row => {
-      return (
-        String(row.year).toLowerCase().includes(query) ||
-        String(row.cebuTotal).toLowerCase().includes(query) ||
-        String(row.negrosTotal).toLowerCase().includes(query) ||
-        String(row.panayTotal).toLowerCase().includes(query) ||
-        String(row.leyteSamarTotal).toLowerCase().includes(query) ||
-        String(row.boholTotal).toLowerCase().includes(query) ||
-        String(row.visayasTotal).toLowerCase().includes(query) ||
-        String(row.visayasConsumption).toLowerCase().includes(query)
-      );
-    });
-  };
-
-  const getSortedData = (data) => {
-    if (!sortConfig.key) return data;
-    
-    return [...data].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  };
-
-  // Get filtered and sorted data
-  const filteredData = useMemo(() => getFilteredData(), [tableData, searchQuery]);
-  const displayData = useMemo(() => getSortedData(filteredData), [filteredData, sortConfig]);
-
-  // Handle PDF export
-  const handleExportPDF = async () => {
-    try {
-      const success = await exportPeerToPeerPDF(displayData);
-      
-      if (success) {
-        setNotification({
-          open: true,
-          message: 'PDF exported successfully!',
-          type: 'success'
-        });
-      } else {
-        setNotification({
-          open: true,
-          message: 'Failed to export PDF. Please try again.',
-          type: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      setNotification({
-        open: true,
-        message: 'Error exporting PDF: ' + error.message,
-        type: 'error'
-      });
-    }
-  };
-
   // Show fallback UI when there's a connection error
   const renderConnectionError = () => (
     <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center">
@@ -600,10 +318,10 @@ const PeerToPeerAdminPrototype = () => {
       <div className="mt-4 text-gray-500 text-sm">
         <p>Troubleshooting Steps:</p>
         <ol className="list-decimal text-left inline-block mt-2">
-          <li>Ensure your Django server is running</li>
-          <li>Check for any errors in Django console</li>
-          <li>Verify your database connection settings</li>
-          <li>Check if MongoDB is accessible</li>
+          <li>Check your internet connection</li>
+          <li>Ensure the backend server is running</li>
+          <li>Verify your network configuration</li>
+          <li>Check if the API endpoint is correct</li>
         </ol>
       </div>
     </div>
@@ -851,10 +569,10 @@ const PeerToPeerAdminPrototype = () => {
                       <HighlightText text={row.visayasConsumption.toFixed(2)} highlight={searchQuery} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {row.solarCost.toFixed(2)}
+                      {row.solarCost ? row.solarCost.toFixed(2) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {row.meralcoRate.toFixed(2)}
+                      {row.meralcoRate ? row.meralcoRate.toFixed(2) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
@@ -878,7 +596,7 @@ const PeerToPeerAdminPrototype = () => {
         </div>
         <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">{displayData.length}</span> of <span className="font-medium">{tableData.length}</span> records
+            Showing <span className="font-medium">{displayData.length > 0 ? 1 : 0}</span> to <span className="font-medium">{displayData.length}</span> of <span className="font-medium">{tableData.length}</span> records
             {searchQuery && displayData.length !== tableData.length && (
               <span className="ml-2 italic text-gray-400">(filtered from {tableData.length} total)</span>
             )}
@@ -1210,6 +928,25 @@ const PeerToPeerAdminPrototype = () => {
                 />
               </div>
             </div>
+            
+            {/* Additional Parameters */}
+            <div className="border p-4 rounded-md bg-blue-50">
+              <h3 className="text-lg font-medium mb-4">Cost Parameters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <NumberBox
+                  label="Solar Cost (PHP/W)"
+                  value={formValues["Solar Cost (PHP/W)"]}
+                  onChange={(e) => handleInputChange("Solar Cost (PHP/W)", e)}
+                  placeholder="Enter value"
+                />
+                <NumberBox
+                  label="MERALCO Rate (PHP/kWh)"
+                  value={formValues["MERALCO Rate (PHP/kWh)"]}
+                  onChange={(e) => handleInputChange("MERALCO Rate (PHP/kWh)", e)}
+                  placeholder="Enter value"
+                />
+              </div>
+            </div>
           </Box>
         </DialogContent>
         <DialogActions className="p-4">
@@ -1223,7 +960,7 @@ const PeerToPeerAdminPrototype = () => {
           </Button>
           <Button
             variant="primary"
-            onClick={handleSaveRecord}
+            onClick={handleSubmitRecord}
             disabled={isLoading}
           >
             {isLoading ? 'Processing...' : (isEditing ? 'Update' : 'Save')}

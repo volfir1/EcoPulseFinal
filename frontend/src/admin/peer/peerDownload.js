@@ -1,255 +1,215 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-// Update these paths to match your project structure
-import companyLogo from '@assets/images/logo.png';
-import schoolLogo from '@assets/images/tup_logo.png';
-
-/**
- * Generates and downloads a PDF report for peer-to-peer energy data
- * 
- * @param {Array} data - Energy data to include in report
- * @returns {Promise<boolean>} Success status of export operation
- */
 export const exportPeerToPeerPDF = async (data) => {
   try {
     // Create new PDF document
     const doc = new jsPDF({
-      orientation: 'landscape', // Use landscape for wider tables
+      orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
     });
-
-    // Document dimensions for reference
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Header background
-    const headerHeight = 30;
-    doc.setFillColor(66, 139, 202); // Blue theme
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
-
-    // Add logos
-    doc.addImage(companyLogo, 'PNG', 15, 5, 20, 20);
-    doc.addImage(schoolLogo, 'PNG', pageWidth - 35, 5, 20, 20);
+    // Add title and metadata
+    doc.setFontSize(18);
+    doc.text('Peer-to-Peer Energy Generation Data', 14, 22);
     
-    // Header text
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    
-    const titleText = 'Peer-to-Peer Energy Data Report';
-    const titleWidth = doc.getStringUnitWidth(titleText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
-    const titleX = (pageWidth - titleWidth) / 2;
-    doc.text(titleText, titleX, 17);
-
-    // Date
-    doc.setFontSize(11);
-    const dateText = `Date Generated: ${new Date().toLocaleDateString()}`;
-    const dateWidth = doc.getStringUnitWidth(dateText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
-    const dateX = (pageWidth - dateWidth) / 2;
-    doc.text(dateText, dateX, 25);
-
-    doc.setTextColor(0, 0, 0);
-    let yPosition = headerHeight + 15;
-
-    // Regional Energy Production chart title
-    doc.setFontSize(14);
-    const tableTitleText = "Regional Energy Production Summary";
-    const tableTitleWidth = doc.getStringUnitWidth(tableTitleText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
-    const tableTitleX = (pageWidth - tableTitleWidth) / 2;
-    doc.text(tableTitleText, tableTitleX, yPosition);
-    yPosition += 8;
-
-    // Table with region data
-    doc.autoTable({
-      head: [
-        ['Year', 'Cebu', 'Negros', 'Panay', 'Leyte-Samar', 'Bohol', 'Visayas Total', 'Visayas Consumption']
-      ],
-      body: data.map(item => [
-        item.year,
-        parseFloat(item.cebuTotal).toFixed(2),
-        parseFloat(item.negrosTotal).toFixed(2),
-        parseFloat(item.panayTotal).toFixed(2),
-        parseFloat(item.leyteSamarTotal).toFixed(2),
-        parseFloat(item.boholTotal).toFixed(2),
-        parseFloat(item.visayasTotal).toFixed(2),
-        parseFloat(item.visayasConsumption).toFixed(2)
-      ]),
-      startY: yPosition,
-      margin: { top: 10, right: 10, bottom: 10, left: 10 },
-      headStyles: {
-        fillColor: [66, 139, 202],
-        halign: 'center',
-        fontSize: 11
-      },
-      columnStyles: {
-        0: { cellWidth: 25, halign: 'center' },
-        1: { cellWidth: 30, halign: 'center' },
-        2: { cellWidth: 30, halign: 'center' },
-        3: { cellWidth: 30, halign: 'center' },
-        4: { cellWidth: 35, halign: 'center' },
-        5: { cellWidth: 30, halign: 'center' },
-        6: { cellWidth: 35, halign: 'center' },
-        7: { cellWidth: 40, halign: 'center' }
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        overflow: 'linebreak'
-      },
-      alternateRowStyles: {
-        fillColor: [235, 244, 250]
-      }
-    });
-    
-    // Add a second page for solar cost and other data if needed
-    doc.addPage();
-    
-    // Title for second page
-    doc.setFillColor(66, 139, 202);
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    const page2Title = "Energy Supply & Demand Analysis";
-    const page2TitleWidth = doc.getStringUnitWidth(page2Title) * doc.internal.getFontSize() / doc.internal.scaleFactor;
-    const page2TitleX = (pageWidth - page2TitleWidth) / 2;
-    doc.text(page2Title, page2TitleX, 17);
-    doc.setFontSize(11);
-    doc.text(dateText, dateX, 25);
-    
-    // Reset position for second page
-    yPosition = headerHeight + 15;
-    doc.setTextColor(0, 0, 0);
-    
-    // Add production vs consumption analysis header
-    doc.setFontSize(14);
-    doc.text("Regional Production vs. Consumption Analysis", 15, yPosition);
-    yPosition += 10;
-    
-    // Add a table for production vs consumption comparison
-    const consumptionData = data.map(item => {
-      const surplus = item.visayasTotal - item.visayasConsumption;
-      const surplusPercent = item.visayasConsumption > 0 ? (surplus / item.visayasConsumption * 100) : 0;
-      return [
-        item.year,
-        parseFloat(item.visayasTotal).toFixed(2),
-        parseFloat(item.visayasConsumption).toFixed(2),
-        parseFloat(surplus).toFixed(2),
-        `${surplusPercent.toFixed(1)}%`,
-        surplus > 0 ? "Surplus" : "Deficit"
-      ];
-    });
-    
-    doc.autoTable({
-      head: [
-        ['Year', 'Total Production (GWh)', 'Consumption (GWh)', 'Difference (GWh)', 'Difference (%)', 'Status']
-      ],
-      body: consumptionData,
-      startY: yPosition,
-      margin: { top: 10, right: 10, bottom: 10, left: 10 },
-      headStyles: {
-        fillColor: [66, 139, 202],
-        halign: 'center',
-        fontSize: 11
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 3
-      },
-      columnStyles: {
-        0: { cellWidth: 25, halign: 'center' },
-        1: { cellWidth: 40, halign: 'center' },
-        2: { cellWidth: 40, halign: 'center' },
-        3: { cellWidth: 35, halign: 'center' },
-        4: { cellWidth: 30, halign: 'center' },
-        5: { cellWidth: 25, halign: 'center' }
-      },
-      alternateRowStyles: {
-        fillColor: [235, 244, 250]
-      },
-      didDrawCell: (data) => {
-        // Color the "Status" cell based on Surplus/Deficit
-        if (data.section === 'body' && data.column.index === 5) {
-          const cell = data.cell;
-          const text = cell.raw;
-          if (text === 'Surplus') {
-            doc.setFillColor(200, 250, 200); // Light green for surplus
-            doc.rect(cell.x, cell.y, cell.width, cell.height, 'F');
-            doc.setTextColor(0, 100, 0); // Dark green text
-            doc.text(text, cell.x + cell.width / 2, cell.y + cell.height / 2, { align: 'center', baseline: 'middle' });
-            doc.setTextColor(0, 0, 0); // Reset text color
-            return false; // Don't draw the default cell content
-          } else if (text === 'Deficit') {
-            doc.setFillColor(250, 200, 200); // Light red for deficit
-            doc.rect(cell.x, cell.y, cell.width, cell.height, 'F');
-            doc.setTextColor(150, 0, 0); // Dark red text
-            doc.text(text, cell.x + cell.width / 2, cell.y + cell.height / 2, { align: 'center', baseline: 'middle' });
-            doc.setTextColor(0, 0, 0); // Reset text color
-            return false; // Don't draw the default cell content
-          }
-        }
-      }
-    });
-    
-    // Get new Y position after the table
-    yPosition = doc.autoTable.previous.finalY + 20;
-    
-    // Add regional insights section
-    doc.setFontSize(14);
-    doc.text("Regional Insights", 15, yPosition);
-    yPosition += 8;
-    
-    // Add insights in bullet points
+    // Add subtitle with date
     doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on ${new Date().toLocaleDateString()} - EcoPulse Energy Dashboard`, 14, 30);
     
-    const insights = [
-      "The Visayas region shows an overall trend of increased energy production across all provinces.",
-      "Negros consistently produces the highest renewable energy percentage in the region.",
-      "Leyte-Samar has significant geothermal capacity contributing to overall production.",
-      "Consumption patterns indicate growing demand throughout the Visayas region.",
-      "Peer-to-peer energy trading opportunities exist in areas with production surplus."
+    // Create headers for the table
+    const headers = [
+      'Year', 
+      'Cebu (GWh)', 
+      'Negros (GWh)', 
+      'Panay (GWh)', 
+      'Leyte-Samar (GWh)', 
+      'Bohol (GWh)', 
+      'Visayas Total (GWh)', 
+      'Visayas Consumption (GWh)'
     ];
     
-    insights.forEach((insight, index) => {
-      // Draw bullet point
-      doc.setFillColor(66, 139, 202);
-      doc.circle(20, yPosition + 1.5, 1.5, 'F');
-      
-      // Draw text with multi-line support if needed
-      const lines = doc.splitTextToSize(insight, pageWidth - 45);
-      doc.text(lines, 25, yPosition);
-      yPosition += (lines.length * 6);
+    // Extract the relevant data from each record
+    const tableData = data.map(record => [
+      record.year,
+      record.cebuTotal.toFixed(2),
+      record.negrosTotal.toFixed(2),
+      record.panayTotal.toFixed(2),
+      record.leyteSamarTotal.toFixed(2),
+      record.boholTotal.toFixed(2),
+      record.visayasTotal.toFixed(2),
+      record.visayasConsumption.toFixed(2)
+    ]);
+    
+    // Generate the table
+    doc.autoTable({
+      head: [headers],
+      body: tableData,
+      startY: 40,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240]
+      }
     });
     
-    // Footer
-    yPosition = pageHeight - 20;
+    // Add information about renewable energy
+    const finalY = doc.lastAutoTable.finalY || 150;
     
-    // Footer line
-    doc.setDrawColor(66, 139, 202);
-    doc.setLineWidth(0.5);
-    doc.line(15, yPosition - 10, pageWidth - 15, yPosition - 10);
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Energy Distribution by Region', 14, finalY + 10);
     
-    // Footer logo
-    doc.addImage(companyLogo, 'PNG', 15, yPosition - 7, 12, 12);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
     
-    // Contact information
-    doc.setFontSize(8);
-    const contactText = "Ecopulse Energy Management | Phone: +63 2 1234 5678 | Email: info@ecopulse.com";
-    doc.text(contactText, pageWidth / 2, yPosition - 4, { align: 'center' });
+    // Create a second table with renewable energy details
+    const renewableHeaders = [
+      'Region', 
+      'Total Energy (GWh)', 
+      'Non-Renewable (GWh)', 
+      'Renewable (GWh)', 
+      'Renewable %'
+    ];
     
-    // Copyright
-    doc.setFontSize(7);
-    const copyrightText = `© ${new Date().getFullYear()} Ecopulse. All rights reserved.`;
-    doc.text(copyrightText, pageWidth / 2, yPosition, { align: 'center' });
+    // Calculate renewable percentages
+    const renewableData = data.flatMap(record => {
+      // Only use the most recent year for the second table
+      if (record.year === Math.max(...data.map(r => r.year))) {
+        const calculateRenewablePercent = (total, nonRenewable) => {
+          const renewable = total - nonRenewable;
+          return ((renewable / total) * 100).toFixed(1) + '%';
+        };
+        
+        // Get the record's all records array for detailed data
+        const yearRecords = record.allRecords || [];
+        const firstRecord = yearRecords[0] || {};
+        
+        // Helper function to safely get values
+        const getValue = (key) => {
+          const rec = yearRecords.find(r => r[key] !== undefined);
+          return rec ? rec[key] : 0;
+        };
+        
+        return [
+          ['Cebu', 
+           record.cebuTotal.toFixed(2), 
+           getValue('Cebu Total Non-Renewable Energy (GWh)') || '0.00',
+           (record.cebuTotal - (getValue('Cebu Total Non-Renewable Energy (GWh)') || 0)).toFixed(2),
+           calculateRenewablePercent(record.cebuTotal, getValue('Cebu Total Non-Renewable Energy (GWh)') || 0)
+          ],
+          ['Negros', 
+           record.negrosTotal.toFixed(2), 
+           getValue('Negros Total Non-Renewable Energy (GWh)') || '0.00',
+           (record.negrosTotal - (getValue('Negros Total Non-Renewable Energy (GWh)') || 0)).toFixed(2),
+           calculateRenewablePercent(record.negrosTotal, getValue('Negros Total Non-Renewable Energy (GWh)') || 0)
+          ],
+          ['Panay', 
+           record.panayTotal.toFixed(2), 
+           getValue('Panay Total Non-Renewable Energy (GWh)') || '0.00',
+           (record.panayTotal - (getValue('Panay Total Non-Renewable Energy (GWh)') || 0)).toFixed(2),
+           calculateRenewablePercent(record.panayTotal, getValue('Panay Total Non-Renewable Energy (GWh)') || 0)
+          ],
+          ['Leyte-Samar', 
+           record.leyteSamarTotal.toFixed(2), 
+           getValue('Leyte-Samar Total Non-Renewable (GWh)') || '0.00',
+           (record.leyteSamarTotal - (getValue('Leyte-Samar Total Non-Renewable (GWh)') || 0)).toFixed(2),
+           calculateRenewablePercent(record.leyteSamarTotal, getValue('Leyte-Samar Total Non-Renewable (GWh)') || 0)
+          ],
+          ['Bohol', 
+           record.boholTotal.toFixed(2), 
+           getValue('Bohol Total Non-Renewable (GWh)') || '0.00',
+           (record.boholTotal - (getValue('Bohol Total Non-Renewable (GWh)') || 0)).toFixed(2),
+           calculateRenewablePercent(record.boholTotal, getValue('Bohol Total Non-Renewable (GWh)') || 0)
+          ],
+          ['Visayas Total', 
+           record.visayasTotal.toFixed(2), 
+           (parseFloat(getValue('Cebu Total Non-Renewable Energy (GWh)') || 0) +
+            parseFloat(getValue('Negros Total Non-Renewable Energy (GWh)') || 0) +
+            parseFloat(getValue('Panay Total Non-Renewable Energy (GWh)') || 0) +
+            parseFloat(getValue('Leyte-Samar Total Non-Renewable (GWh)') || 0) +
+            parseFloat(getValue('Bohol Total Non-Renewable (GWh)') || 0)).toFixed(2),
+           (record.visayasTotal - 
+            (parseFloat(getValue('Cebu Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Negros Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Panay Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Leyte-Samar Total Non-Renewable (GWh)') || 0) +
+             parseFloat(getValue('Bohol Total Non-Renewable (GWh)') || 0))).toFixed(2),
+           calculateRenewablePercent(
+             record.visayasTotal,
+             parseFloat(getValue('Cebu Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Negros Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Panay Total Non-Renewable Energy (GWh)') || 0) +
+             parseFloat(getValue('Leyte-Samar Total Non-Renewable (GWh)') || 0) +
+             parseFloat(getValue('Bohol Total Non-Renewable (GWh)') || 0)
+           )
+          ]
+        ];
+      }
+      return [];
+    });
     
-    // Save the PDF
-    doc.save(`Peer-to-Peer_Energy_Report_${new Date().getFullYear()}.pdf`);
+    // Add the renewable energy table
+    doc.autoTable({
+      head: [renewableHeaders],
+      body: renewableData,
+      startY: finalY + 15,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3
+      },
+      headStyles: {
+        fillColor: [46, 204, 113],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240]
+      }
+    });
+    
+    // Add footer with page numbers
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      
+      // Footer text
+      doc.text(
+        'EcoPulse Energy Dashboard - Confidential', 
+        14, 
+        doc.internal.pageSize.height - 10
+      );
+      
+      // Page numbers
+      doc.text(
+        `Page ${i} of ${pageCount}`, 
+        doc.internal.pageSize.width - 30, 
+        doc.internal.pageSize.height - 10
+      );
+    }
+    
+    // Save the PDF with a filename based on the current date
+    const today = new Date();
+    const filename = `peer-to-peer-energy-data-${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}.pdf`;
+    
+    doc.save(filename);
     
     return true;
   } catch (error) {
-    console.error('Export error:', error);
+    console.error('Error generating PDF:', error);
     return false;
   }
 };
-
-export default exportPeerToPeerPDF; 
