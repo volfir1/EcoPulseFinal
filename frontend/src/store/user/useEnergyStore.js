@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '@features/modules/api';
+import api, { railwayApi } from '@features/modules/api';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -135,12 +135,12 @@ const createEnergyStore = (energyType) => {
       get().fetchData(startYear, endYear);
     },
     
-    // Enhanced fetchData method with better error handling 
-// Enhanced fetchData method with more robust error handling
+// Enhanced fetchData method using the API module with fallback
 fetchData: async (startYear, endYear) => {
   set({ loading: true, apiError: null });
   
   try {
+    // Try using the main API first
     const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
     
     if (!response?.data?.predictions) {
@@ -164,21 +164,54 @@ fetchData: async (startYear, endYear) => {
       apiError: null
     });
 
-  } catch (error) {
-    console.error(`Error fetching ${energyType} data:`, error);
+  } catch (primaryError) {
+    console.error(`Error fetching ${energyType} data from primary API:`, primaryError);
     
-    // Use mock data as fallback
-    const mockData = get().generateMockData(startYear, endYear);
-    
-    set({
-      generationData: mockData,
-      currentProjection: mockData[mockData.length - 1]?.value || null,
-      loading: false,
-      apiError: {
-        message: "Using simulated data",
-        usingMockData: true
+    try {
+      // Try the Railway API as a fallback
+      console.log(`Attempting fallback to Railway API for ${energyType} data...`);
+      const fallbackResponse = await railwayApi.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
+      
+      if (!fallbackResponse?.data?.predictions) {
+        throw new Error('No predictions data available from fallback API');
       }
-    });
+
+      // Format data from the fallback response
+      const fallbackData = fallbackResponse.data.predictions.map(item => ({
+        date: item.Year,
+        value: Math.abs(item['Predicted Production']) // Convert negative values to positive
+      }));
+
+      // Get latest prediction value
+      const fallbackProjection = fallbackData[fallbackData.length - 1]?.value || null;
+
+      // Update state with fallback data
+      set({ 
+        generationData: fallbackData,
+        currentProjection: fallbackProjection,
+        loading: false,
+        apiError: {
+          message: "Using data from backup server",
+          usingFallbackAPI: true
+        }
+      });
+      
+    } catch (fallbackError) {
+      console.error(`Both primary and fallback APIs failed for ${energyType} data:`, fallbackError);
+      
+      // Use mock data as final fallback
+      const mockData = get().generateMockData(startYear, endYear);
+      
+      set({
+        generationData: mockData,
+        currentProjection: mockData[mockData.length - 1]?.value || null,
+        loading: false,
+        apiError: {
+          message: "Using simulated data",
+          usingMockData: true
+        }
+      });
+    }
   }
 },
     
@@ -413,6 +446,18 @@ fetchData: async (startYear, endYear) => {
           const simulationWidth = doc.getStringUnitWidth(simulationText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
           const simulationX = (pageWidth - simulationWidth) / 2;
           doc.text(simulationText, simulationX, yPosition);
+          doc.setTextColor(0, 0, 0); // Reset to black
+          yPosition += 10;
+        }
+        
+        // Add fallback API notice if applicable
+        if (apiError && apiError.usingFallbackAPI) {
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 192); // Blue text for information
+          const fallbackText = "Note: Using data from backup server";
+          const fallbackWidth = doc.getStringUnitWidth(fallbackText) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+          const fallbackX = (pageWidth - fallbackWidth) / 2;
+          doc.text(fallbackText, fallbackX, yPosition);
           doc.setTextColor(0, 0, 0); // Reset to black
           yPosition += 10;
         }
