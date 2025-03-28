@@ -58,7 +58,7 @@ export const useRegister = () => {
         lastName: values.lastName,
         email: values.email,
         password: values.password,
-        phone: values.phone || ''
+        
       });
 
       if (result.success) {

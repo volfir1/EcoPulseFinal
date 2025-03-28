@@ -12,6 +12,8 @@ let currentAuthRequest = null;
 const authService = {
   register: async (userData) => {
     try {
+      console.log('Sending registration data:', userData);
+      console.log('Sending to URL:', nodeApi.defaults.baseURL + '/auth/register');
       const response = await nodeApi.post('/auth/register', userData);
       
       // Return data needed for verification
@@ -19,11 +21,13 @@ const authService = {
         success: true, 
         user: response.data.user,
         userId: response.data.user?.id || response.data.userId,
-        requireVerification: true,  // Always require verification for new registrations
+        requireVerification: true,
         message: response.data.message 
       };
     } catch (error) {
       console.error("Registration Error:", error.message);
+      console.error("Error details:", error.response?.data);
+      console.error("Request configuration:", error.config);
       throw error;
     }
   },

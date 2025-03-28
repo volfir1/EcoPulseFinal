@@ -1,14 +1,22 @@
 import axios from 'axios';
 
-// Get the API URL from env or use fallbacks
-const API_URL = process.env.REACT_APP_API_URL || import.meta.env.VITE_API_URL || 'https://ecopulsebackend-1.onrender.com';
-const RAILWAY_API_URL = process.env.REACT_APP_RAILWAY_API_URL || import.meta.env.VITE_RAILWAY_API_URL || 'https://ecopulsebackend.onrender.com';
+
+// Safely get environment variables
+const API_URL = 
+  (typeof process !== 'undefined' ? process.env.REACT_APP_API_URL : undefined) || 
+  (import.meta && import.meta.env ? import.meta.env.VITE_API_URL : undefined) || 
+  'https://ecopulsebackend-1.onrender.com/api';
+
+const RAILWAY_API_URL = 
+  (typeof process !== 'undefined' ? process.env.REACT_APP_RAILWAY_API_URL : undefined) || 
+  (import.meta && import.meta.env ? import.meta.env.VITE_RAILWAY_API_URL : undefined) || 
+  'https://ecopulsebackend.onrender.com';
 
 // Create an instance of axios for the primary API
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true, // Important for cookies/auth
-  timeout: 10, // 30 seconds timeout
+  timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json'
   }

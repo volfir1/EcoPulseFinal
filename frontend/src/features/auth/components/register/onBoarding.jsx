@@ -6,6 +6,8 @@ import { useSnackbar, useLoader, p, t } from '@shared/index';
 import { useAuth } from '@context/AuthContext';
 // Import the compression utilities
 import { compressImageFile, compressBase64Image } from '@utils/imageCompression';
+// Import nodeApi from your API module
+import { nodeApi } from '@modules/api';
 
 // Default avatar options
 const defaultAvatars = [
@@ -86,14 +88,31 @@ const Onboarding = () => {
 
     const fetchSvgAsBase64 = async (svgUrl) => {
         try {
-            const response = await fetch(svgUrl);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to fetch SVG: ${response.status}`);
+            // For external SVGs, we need to use a different approach
+            // If the SVG is from our own server, we can use a direct fetch
+            // If it starts with '/', it's a local path
+            if (svgUrl.startsWith('/')) {
+                // Get the base URL (protocol + hostname + port)
+                const baseUrl = window.location.origin;
+                const fullUrl = `${baseUrl}${svgUrl}`;
+                
+                // Use regular fetch for local SVGs
+                const response = await fetch(fullUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch SVG: ${response.status}`);
+                }
+                
+                const svgText = await response.text();
+                return `data:image/svg+xml;base64,${btoa(svgText)}`;
+            } else {
+                // For external SVGs, use nodeApi
+                const response = await nodeApi.get(svgUrl, {
+                    responseType: 'text'
+                });
+                
+                return `data:image/svg+xml;base64,${btoa(response.data)}`;
             }
-            
-            const svgText = await response.text();
-            return `data:image/svg+xml;base64,${btoa(svgText)}`;
         } catch (error) {
             console.error('Error converting SVG to base64:', error);
             throw error;
@@ -122,19 +141,12 @@ const Onboarding = () => {
             console.log('Fetching SVG from:', avatarSrc);
 
             // Fetch the SVG content
-            const response = await fetch(avatarSrc);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch SVG: ${response.status}`);
-            }
-
-            // Get SVG content as text
-            const svgContent = await response.text();
+            const svgContent = await fetch(avatarSrc).then(res => res.text());
 
             // Convert to base64
             const base64Data = `data:image/svg+xml;base64,${btoa(svgContent)}`;
             
             // Compress the base64 image using our utility
-            // For SVGs we can still compress if they're large, though they're usually small
             const compressedBase64 = await compressBase64Image(base64Data, {
                 maxSizeMB: 2, // 2MB is a safe limit
                 maxWidthOrHeight: 800, // Reasonable size for avatars
@@ -146,32 +158,21 @@ const Onboarding = () => {
             const uniqueId = `${userId}_${Date.now()}`;
 
             // Create a request to your backend to upload this default avatar to Cloudinary
-            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-            const uploadResponse = await fetch(`${API_URL}/upload/avatar/base64`, {
-                method: 'POST',
+            const uploadResponse = await nodeApi.post('/upload/avatar/base64', {
+                base64Image: compressedBase64,
+                avatarId: avatarId,
+                uniqueId: uniqueId
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify({
-                    base64Image: compressedBase64, // Use compressed image
-                    avatarId: avatarId,
-                    uniqueId: uniqueId
-                })
+                }
             });
 
-            if (!uploadResponse.ok) {
-                const errorData = await uploadResponse.json();
-                throw new Error(errorData.message || `Server error: ${uploadResponse.status}`);
+            if (!uploadResponse.data.success) {
+                throw new Error(uploadResponse.data.message || 'Failed to upload default avatar');
             }
 
-            const data = await uploadResponse.json();
-
-            if (!data.success) {
-                throw new Error(data.message || 'Failed to upload default avatar');
-            }
-
-            return data.avatar; // Return the Cloudinary URL
+            return uploadResponse.data.avatar; // Return the Cloudinary URL
         } catch (error) {
             console.error('Error uploading default avatar:', error);
             throw error;
@@ -214,39 +215,34 @@ const Onboarding = () => {
             const formData = new FormData();
             formData.append('avatar', compressedFile);
 
-            // Upload to our backend which will handle Cloudinary
-            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-            const response = await fetch(`${API_URL}/upload/avatar`, {
-                method: 'POST',
+            // Upload to our backend which will handle Cloudinary using nodeApi
+            const response = await nodeApi.post('/upload/avatar', formData, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Content-Type': 'multipart/form-data'
                 },
-                body: formData
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(40 + (percentCompleted * 0.5)); // Scale to 40-90%
+                }
             });
 
-            setUploadProgress(70);
+            setUploadProgress(90);
 
-            // Check if response is OK
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Server error: ${response.status}`);
+            // Check if response is successful
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to upload image');
             }
 
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.message || 'Failed to upload image');
-            }
-
-            console.log('Avatar upload response:', data);
+            console.log('Avatar upload response:', response.data);
 
             // Make sure we have an avatar URL
-            if (!data.avatar) {
+            if (!response.data.avatar) {
                 throw new Error('No avatar URL returned from server');
             }
 
             // Update state with the new avatar URL
-            setCustomAvatarUrl(data.avatar);
+            setCustomAvatarUrl(response.data.avatar);
             setIsCustomAvatar(true);
             setUploadProgress(100);
 
@@ -256,7 +252,7 @@ const Onboarding = () => {
             if (setUser && user) {
                 setUser({
                     ...user,
-                    avatar: data.avatar
+                    avatar: response.data.avatar
                 });
             }
         } catch (error) {
@@ -294,28 +290,22 @@ const Onboarding = () => {
             const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
             const uniqueId = `${userId}_${Date.now()}`;
             
-            // Upload the compressed base64 image
-            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-            const response = await fetch(`${API_URL}/upload/base64avatar`, {
-                method: 'POST',
+            // Upload the compressed base64 image using nodeApi
+            const response = await nodeApi.post('/upload/base64avatar', {
+                base64Image: compressedBase64,
+                avatarId: 'custom_avatar',
+                uniqueId: uniqueId
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify({
-                    base64Image: compressedBase64,
-                    avatarId: 'custom_avatar',
-                    uniqueId: uniqueId
-                })
+                }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Server error: ${response.status}`);
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to upload base64 image');
             }
 
-            const data = await response.json();
-            return data.avatar;
+            return response.data.avatar;
         } catch (error) {
             console.error('Error uploading base64 avatar:', error);
             throw error;
@@ -354,11 +344,8 @@ const Onboarding = () => {
 
             console.log('Final avatar being saved:', avatarValue);
             
-            // Get user ID - we need this for constructing a relative payload size
+            // Get user ID - we need this for logging purposes
             const userId = user?.id || JSON.parse(localStorage.getItem('user'))?.id;
-            
-            // Call your API to update user profile with onboarding data
-            const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
             
             // Log the payload size for debugging
             const payloadSize = JSON.stringify({
@@ -371,29 +358,25 @@ const Onboarding = () => {
                 userId: userId,
                 gender: selectedGender,
                 avatarLength: avatarValue.length,
-                hasCompletedOnboarding: true
+                hasCompletedOnboarding: true,
+                payloadSize: payloadSize
             });
             
-            const response = await fetch(`${API_URL}/users/onboarding`, {
-                method: 'POST',
+            // Use nodeApi to send the update request
+            const response = await nodeApi.post('/users/onboarding', {
+                gender: selectedGender,
+                avatar: avatarValue,
+                hasCompletedOnboarding: true
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify({
-                    gender: selectedGender,
-                    avatar: avatarValue,
-                    hasCompletedOnboarding: true
-                }),
-                credentials: 'include'
+                }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Server error: ${response.status}`);
+            // Check if response is successful
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to update profile');
             }
-
-            const data = await response.json();
 
             // Update the user in context and localStorage
             if (setUser && user) {
@@ -434,10 +417,9 @@ const Onboarding = () => {
         navigate(user?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
     };
 
-    // Rest of the component remains the same...
+    // JSX rendering remains the same
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-            {/* Existing JSX code - no changes needed here */}
             <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
