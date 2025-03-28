@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import dj_database_url
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,16 +21,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lh&mm0n5y9n5q02tcyd0jd1)gb7_i1j3q!&25y19zc!ebuufpm'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-lh&mm0n5y9n5q02tcyd0jd1)gb7_i1j3q!&25y19zc!ebuufpm')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']  # Allow all hosts in development; restrict in production
+
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1'
+]
 
 # CORS Settings - Update to be more permissive for development
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS = True  # For development only
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -52,8 +57,9 @@ CORS_ALLOW_HEADERS = [
 
 # Ensure CSRF settings are properly configured for cross-domain requests
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    'http://localhost:5173',
+    'http://localhost:5000',
+    'ecopulsebackend.onrender.com'
 ]
 
 
@@ -75,6 +81,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Add CORS middleware at the top
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -102,16 +109,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
+    )
 }
 
 
@@ -146,15 +153,24 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',  # URL of your frontend application
+    'https://ecopulse.up.railway.app',
+    "https://eco-pulse-final.vercel.app",
+    'http://localhost:5173',
+    'https://ecopulsebackend-production.up.railway.app',
+    'https://ecopulse.up.railway.app',  # Add this one
+    'https://django-server-production-dac6.up.railway.app',
+    'http://localhost:5000',
+    'ecopulsebackend.onrender.com'
 ]
 
-
+CORS_ALLOW_CREDENTIALS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
