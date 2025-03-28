@@ -141,7 +141,7 @@ fetchData: async (startYear, endYear) => {
   
   try {
     // Try using the main API first
-    const response = await api.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
+    const response = await railwayApi.get(`${config.endpoint}?start_year=${startYear}&end_year=${endYear}`);
     
     if (!response?.data?.predictions) {
       throw new Error('No predictions data available');
