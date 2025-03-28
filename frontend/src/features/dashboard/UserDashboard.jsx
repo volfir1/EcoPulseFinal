@@ -9,11 +9,12 @@ import {
   Sun, Wind, Droplets, Leaf, Thermometer, 
   Download, ArrowUpRight, BarChart3, AlertCircle
 } from 'lucide-react';
-import axios from 'axios';
 import * as energyUtils from '@store/user/energyUtils';
 import createEnergyStore from '@store/user/useEnergyStore';
 import RenewableEnergyNews from './Articles';
 import { RefreshCw } from 'lucide-react';
+// Import only the railwayApi service
+import { railwayApi } from '@modules/api'; // Update the path to match your project structure
 
 // Define energy types and their corresponding icons
 const energyTypes = [
@@ -23,9 +24,6 @@ const energyTypes = [
   { type: 'biomass', icon: Leaf, color: '#16A34A', name: 'Biomass', endpoint: '/api/predictions/biomass/' },
   { type: 'geothermal', icon: Thermometer, color: '#FF6B6B', name: 'Geothermal', endpoint: '/api/predictions/geothermal/' }
 ];
-
-// Base API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ecopulsebackend.onrender.com';
 
 const Dashboard = () => {
   // Responsive state
@@ -73,20 +71,14 @@ const Dashboard = () => {
     let errors = [];
     let usedMockData = false;
     
-    // Create axios instance with timeout
-    const api = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 10000 // 10 second timeout
-    });
-    
     // Fetch data for each energy type
     for (const { type, endpoint } of energyTypes) {
       try {
         // Log which endpoint we're trying to fetch
-        console.log(`Fetching from: ${API_BASE_URL}${endpoint}?start_year=2025&end_year=2030`);
+        console.log(`Fetching from: ${endpoint}?start_year=2025&end_year=2030`);
         
-        // Try to fetch real data
-        const response = await api.get(endpoint, {
+        // Use only the railwayApi service
+        const response = await railwayApi.get(endpoint, {
           params: { 
             start_year: 2025, 
             end_year: 2030
@@ -138,11 +130,14 @@ const Dashboard = () => {
         errors.push(type);
         usedMockData = true;
         
+        // No secondary fallback attempt since we're only using railwayApi
+        console.error(`Failed to fetch ${type} data from Railway API`);
+        
         // Fall back to mock data
         const store = createEnergyStore(type);
         const mockData = store.getState().generateMockData(2025, 2030);
         const latestProjection = mockData.find(item => item.date === selectedYear)?.value || 
-                                mockData[mockData.length - 1]?.value || 0;
+                               mockData[mockData.length - 1]?.value || 0;
         
         // Add to total
         total += latestProjection;
@@ -211,9 +206,9 @@ const Dashboard = () => {
     try {
       alert('Dashboard export started');
       
-      // Attempt to use actual export API if available
+      // Attempt to use Railway API for export
       try {
-        const response = await axios.post(`${API_BASE_URL}/api/export/dashboard`, {
+        const response = await railwayApi.post('/api/export/dashboard', {
           year: selectedYear,
           data: energyData
         }, {
