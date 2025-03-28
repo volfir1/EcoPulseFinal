@@ -62,6 +62,6 @@ nodeApi.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-s
+
 export { nodeApi, railwayApi };
 export default api;
