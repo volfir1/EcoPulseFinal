@@ -42,7 +42,7 @@ const useEnergyDashboard = (yearRangeProps = { startYear: 2025, endYear: 2030 })
       // Based on the error logs, we're using the working wind endpoint
       // and applying multipliers to simulate different energy types
       const energyTypes = [
-        { type: 'solar', name: 'Solar', endpoint: 'api/predictions/wind/', color: '#FFB800', multiplier: 1.2 },
+        { type: 'solar', name: 'Solar', endpoint: 'api/predictions/solar/', color: '#FFB800', multiplier: 1.2 },
         { type: 'hydro', name: 'Hydro', endpoint: 'api/predictions/hydro/', color: '#2E90E5', multiplier: 0.8 },
         { type: 'wind', name: 'Wind', endpoint: 'api/predictions/wind/', color: '#64748B', multiplier: 1.0 },
         { type: 'biomass', name: 'Biomass', endpoint: 'api/predictions/biomass/', color: '#16A34A', multiplier: 0.5 },
