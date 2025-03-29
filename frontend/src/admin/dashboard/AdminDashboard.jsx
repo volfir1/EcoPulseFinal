@@ -12,54 +12,41 @@ import {
   Button as MuiButton,
   Tab,
   Tabs,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   Tooltip
 } from '@mui/material';
-import { 
-  LineChart, 
-  Line, 
+import {
+  LineChart,
+  Line,
   BarChart,
   Bar,
-  PieChart, 
-  Pie, 
+  PieChart,
+  Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend, 
-  ResponsiveContainer 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import {
   Activity,
   TrendingUp,
   AlertTriangle,
-  CheckCircle,
-  Clock,
-  FileText,
   Sun,
   Wind,
   Droplets,
   RefreshCw,
-  Key,
-  Settings,
-  Download,
-  Eye,
   Info
 } from 'lucide-react';
 import dayjs from 'dayjs';
-import{ debounce }from '@mui/material';
+import debounce from 'lodash/debounce'; // Use proper lodash import
 import { Button } from '@shared/index';
 import useEnergyDashboard from './hook';
 import { formatNumber, formatPercentage, getChangeColor, formatDate } from './util';
 import { performanceMetrics } from './data';
-import {useYearPicker, YearPicker} from '@shared/index';
+import { YearPicker } from '@shared/index';
 
 // Custom TabPanel component
 function TabPanel(props) {
@@ -85,34 +72,13 @@ function TabPanel(props) {
 const EnergyDashboard = () => {
   const [tabValue, setTabValue] = useState(0);
   const [usingMockData, setUsingMockData] = useState(false);
-  
-  // Initialize year picker state and handlers
-  const {
-    startYear,
-    endYear,
-    error,
-    handleStartYearChange,
-    handleEndYearChange,
-    handleReset
-  } = useYearPicker({
-    initialStartYear: 2025,
-    initialEndYear: 2030,
-    onStartYearChange: (year) => {
-      setYearRange(prev => ({ ...prev, startYear: year }));
-    },
-    onEndYearChange: (year) => {
-      setYearRange(prev => ({ ...prev, endYear: year }));
-    }
-  });
-  
- 
 
-  // State for year range
+  // State for year range - this is the single source of truth
   const [yearRange, setYearRange] = useState({
-    startYear: startYear.year(),
-    endYear: endYear.year()
+    startYear: 2025,
+    endYear: 2030
   });
-  
+
   // Initialize energy dashboard hook with year range
   const {
     loading,
@@ -121,24 +87,39 @@ const EnergyDashboard = () => {
     refreshData,
     chartRefs
   } = useEnergyDashboard(yearRange);
-  
 
-  const debounceRefresh = useCallback(
-    debounce((range)=>{
-      refreshData(range)
-    },500),
+  // Create a properly debounced refresh function
+  const debouncedRefresh = useCallback(
+    debounce((range) => {
+      console.log("Refreshing with year range:", range);
+      refreshData(range);
+    }, 500),
     [refreshData]
-  )
-  //UseEffect to trigger refresh for the year picker
-  useEffect(()=>{
-    if (yearRange.startYear && yearRange.endYear){
-      refreshData(yearRange)
-    }
-  },[yearRange,refreshData])
+  );
+
+  // Year picker handlers - directly update the yearRange state
+  const handleStartYearChange = useCallback((year) => {
+    console.log("Start year changed to:", year);
+    setYearRange(prev => {
+      const newRange = { ...prev, startYear: year };
+      // Schedule refresh with updated range
+      debouncedRefresh(newRange);
+      return newRange;
+    });
+  }, [debouncedRefresh]);
+
+  const handleEndYearChange = useCallback((year) => {
+    console.log("End year changed to:", year);
+    setYearRange(prev => {
+      const newRange = { ...prev, endYear: year };
+      // Schedule refresh with updated range
+      debouncedRefresh(newRange);
+      return newRange;
+    });
+  }, [debouncedRefresh]);
 
   // Update using mock data flag
   useEffect(() => {
-    // Set flag to true if we have API errors
     setUsingMockData(energySummary.usingMockData || false);
   }, [energySummary.usingMockData]);
 
@@ -148,6 +129,7 @@ const EnergyDashboard = () => {
 
   // Handle refreshing data with current year range
   const handleRefreshWithYearRange = () => {
+    console.log("Manual refresh with year range:", yearRange);
     refreshData(yearRange);
   };
 
@@ -172,6 +154,7 @@ const EnergyDashboard = () => {
           </Typography>
         </Box>
         <Box className="flex items-center gap-3">
+          {/* Pass current year range values and handlers to YearPicker */}
           <YearPicker
             initialStartYear={yearRange.startYear}
             initialEndYear={yearRange.endYear}
@@ -179,7 +162,6 @@ const EnergyDashboard = () => {
             onEndYearChange={handleEndYearChange}
             usingMockData={usingMockData}
           />
-          
         </Box>
       </Box>
 
@@ -294,33 +276,7 @@ const EnergyDashboard = () => {
         </Grid>
 
         {/* Charts Section */}
-        <Grid container spacing={3} className="mb-6">
-          {/* Energy Generation Chart */}
-          <Grid item xs={12}>
-            <Paper className="p-4 border rounded-lg h-full">
-              <Typography variant="h6" className="mb-3 font-semibold">
-                Energy Generation Overview
-              </Typography>
-              <Box className="h-80" ref={chartRefs.overview}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={performanceMetrics.weeklyGeneration}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Bar dataKey="solar" name="Solar" fill="#FFB800" radius={[4, 4, 0, 0]} barSize={20} />
-                    <Bar dataKey="wind" name="Wind" fill="#64748B" radius={[4, 4, 0, 0]} barSize={20} />
-                    <Bar dataKey="hydro" name="Hydro" fill="#2E90E5" radius={[4, 4, 0, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+       
 
         {/* Distribution & Yearly Forecast */}
         <Grid container spacing={3}>
@@ -356,35 +312,46 @@ const EnergyDashboard = () => {
             </Paper>
           </Grid>
           
-          {/* Yearly Forecast */}
+          {/* Yearly Forecast - Dynamically based on selected year range */}
           <Grid item xs={12} md={6}>
             <Paper className="p-4 border rounded-lg h-full">
               <Typography variant="h6" className="mb-3 font-semibold">
-                Yearly Energy Forecast
+                Yearly Energy Forecast ({yearRange.startYear}-{yearRange.endYear})
               </Typography>
               <Box className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={[
-                      { year: 2025, value: 3250 },
-                      { year: 2026, value: 3680 },
-                      { year: 2027, value: 4120 },
-                      { year: 2028, value: 4580 },
-                      { year: 2029, value: 5100 },
-                      { year: 2030, value: 5650 }
-                    ]}
+                    data={energyData.totalByYear || []}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
+                    <XAxis dataKey="year" domain={[yearRange.startYear, yearRange.endYear]} />
                     <YAxis />
                     <RechartsTooltip formatter={(value) => [`${value} GWh`, 'Total Production']} />
                     <Legend />
                     <Line 
                       type="monotone" 
-                      dataKey="value" 
-                      name="Total Energy Production" 
-                      stroke="#6366f1" 
+                      dataKey="solar" 
+                      name="Solar Energy" 
+                      stroke="#FFB800" 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="wind" 
+                      name="Wind Energy" 
+                      stroke="#64748B" 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="hydro" 
+                      name="Hydro Energy" 
+                      stroke="#2E90E5" 
                       strokeWidth={2}
                       dot={{ r: 4 }}
                       activeDot={{ r: 6 }}
@@ -401,9 +368,8 @@ const EnergyDashboard = () => {
       <TabPanel value={tabValue} index={1}>
         <Box className="mb-4 flex justify-between">
           <Typography variant="h5">
-            Energy Management
+            Energy Management ({yearRange.startYear}-{yearRange.endYear})
           </Typography>
-         
         </Box>
         
         <Grid container spacing={3} className="mb-6">
@@ -487,11 +453,7 @@ const EnergyDashboard = () => {
             </ResponsiveContainer>
           </Box>
         </Paper>
-        
-        
       </TabPanel>
-      
-     
     </Box>
   );
 };
