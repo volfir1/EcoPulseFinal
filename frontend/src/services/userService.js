@@ -412,8 +412,8 @@ export const userService = {
         console.warn('No auth token available for getDeactivatedUsers');
         return { success: false, users: [] };
       }
-
-      // First try the dedicated deactivated endpoint (if it exists)
+  
+      // Use only the dedicated deactivated endpoint
       try {
         const response = await axios.get(
           `${API_URL}/auth/users/deactivated`,
@@ -434,39 +434,7 @@ export const userService = {
           return response.data;
         }
       } catch (error) {
-        console.log('Dedicated deactivated endpoint not available, trying alternative approach');
-      }
-
-      // If dedicated endpoint failed, try a post request with query
-      try {
-        const response = await axios.post(
-          `${API_URL}/auth/users/query`,
-          {
-            // This explicitly asks for deactivated users only
-            query: { 
-              $or: [
-                { isDeactivated: true },
-                { isAutoDeactivated: true },
-                { status: 'deactivated' },
-                { status: 'deleted' },
-                { status: 'inactive' }
-              ]
-            }
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        
-        if (response.data && response.data.success && response.data.users) {
-          console.log(`Found ${response.data.users.length} deactivated users via query endpoint`);
-          return response.data;
-        }
-      } catch (error) {
-        console.log('Query endpoint not available, falling back to regular endpoint with parameters');
+        console.log('Dedicated deactivated endpoint not available, falling back to regular endpoint');
       }
       
       // Last approach - try regular users endpoint with query parameters

@@ -447,69 +447,66 @@ export const AuthProvider = ({ children }) => {
   
     try {
       console.log('Starting Google sign-in process in AuthContext');
+      
+      // Direct single-step sign-in
       const result = await authService.googleSignIn();
-      console.log('Google sign-in result in AuthContext:', result);
+      console.log('Google sign-in result:', result);
   
-      // Handle case where we get a simple error message with no structured data
+      // Handle case where we get invalid response
       if (!result) {
         throw new Error('Invalid response from Google sign-in service');
       }
   
-      // Handle auto-deactivated accounts
-      if (result.isAutoDeactivated) {
-        console.log('Account is auto-deactivated:', result);
+      // Handle deactivated accounts
+      if (result.isDeactivated || result.isAutoDeactivated) {
+        console.log('Account is deactivated:', result);
         
-        if (typeof setDeactivationInfo === 'function') {
-          setDeactivationInfo({
-            email: result.email,
-            deactivatedAt: result.deactivatedAt,
-            tokenExpired: result.tokenExpired
-          });
-        }
-  
-        // Set deactivation state
-        if (typeof setIsAutoDeactivated === 'function') {
-          setIsAutoDeactivated(true);
-        }
-        
-        if (typeof setRecoveryEmail === 'function') {
-          setRecoveryEmail(result.email);
-        }
-        
-        // Show notification
-        toast.info("Your account has been automatically deactivated due to inactivity. A reactivation link has been sent to your email.");
+        toast.info("Your account has been deactivated. A reactivation link has been sent to your email.");
         
         navigate('/login', {
           state: {
             email: result.email,
-            isAutoDeactivated: true,
-            message: "Your account has been automatically deactivated. Reactivation link sent to your email."
+            isDeactivated: true,
+            isAutoDeactivated: result.isAutoDeactivated || false,
+            message: "Your account has been deactivated. Reactivation link sent to your email."
           },
           replace: true
         });
         
         return {
           success: false,
-          isAutoDeactivated: true,
+          isDeactivated: true,
+          isAutoDeactivated: result.isAutoDeactivated || false,
+          email: result.email,
           message: "Account deactivated. Please check your email for reactivation instructions."
         };
       }
   
-      // Handle verification requirement - check both direct property and nested in user
-      const userEmail = result.email || (result.user && result.user.email);
-      
-      // Handle account verification requirement
+      // Handle verification requirement
       if (result.requireVerification) {
         console.log('Account requires verification:', result);
+        
+        const userEmail = result.email || (result.user && result.user.email);
+        const userId = result.userId || (result.user && result.user.id);
+        
+        if (!userId || !userEmail) {
+          console.error("Missing userId or email for verification redirection", result);
+          toast.error("Verification error. Please try logging in again.");
+          throw new Error("Missing user details for verification");
+        }
+        
+        // Show a toast message about the verification email
+        toast.info("A verification email has been sent. Please check your inbox to complete sign-in.");
+        
         navigate('/verify-email', {
           state: {
-            userId: result.userId,
-            email: userEmail || '',
+            userId: userId,
+            email: userEmail,
             provider: 'google',
-            isNewRegistration: true,
             returnTo: '/dashboard'
           }
         });
+        
         return result;
       }
   
@@ -524,39 +521,70 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(verifiedUser));
         
-        if (result.user.accessToken) {
-          localStorage.setItem('authToken', result.user.accessToken);
+        if (result.user.accessToken || result.token) {
+          localStorage.setItem('authToken', result.user.accessToken || result.token);
         }
   
-        toast.success('Google sign-in successful');
+        toast.success(result.message || 'Google sign-in successful');
         redirectToUserDashboard(verifiedUser);
         return { success: true, user: verifiedUser };
       }
   
-      // Handle unusual response format - inspect response structure and be more lenient
-      // This handles cases where the server response might have different structure
-      if (result.message) {
-        throw new Error(result.message);
-      } else {
-        throw new Error('Google sign-in failed with an unexpected response format');
-      }
+      // Handle unusual response format
+      throw new Error(result.message || 'Google sign-in failed with an unexpected response format');
   
     } catch (error) {
       console.error('Google sign-in error:', error);
       
+      // Check for deactivation info in error response data
+      if (error.response?.data?.isDeactivated || error.response?.data?.message?.includes('deactivated')) {
+        const email = error.response.data.email || '';
+        const isAuto = error.response.data.isAutoDeactivated || false;
+        
+        console.log('Account deactivation detected in error response:', {
+          email,
+          isAuto
+        });
+        
+        toast.info("Your account has been deactivated. A reactivation link has been sent to your email.");
+        
+        navigate('/login', {
+          state: {
+            email,
+            isDeactivated: true,
+            isAutoDeactivated: isAuto,
+            message: "Your account has been deactivated. Reactivation link sent to your email."
+          },
+          replace: true
+        });
+        
+        return {
+          success: false,
+          isDeactivated: true,
+          isAutoDeactivated: isAuto,
+          email,
+          message: "Account deactivated. Please check your email for reactivation instructions."
+        };
+      }
+      
+      // Handle common Firebase Auth errors
       if (error.code === 'auth/popup-closed-by-user') {
         toast.info('Sign-in was cancelled');
         if (typeof setAuthError === 'function') {
           setAuthError('Sign-in was cancelled. Please try again.');
         }
       } else if (error.code === 'auth/popup-blocked') {
-        toast.error('Sign-in popup was blocked. Please try again or use redirect sign-in.');
+        toast.error('Sign-in popup was blocked. Please enable popups or use redirect sign-in.');
         if (typeof setAuthError === 'function') {
           setAuthError('Browser blocked the popup. Please enable popups or use redirect sign-in.');
         }
+        
+        // Show redirect option automatically
+        if (typeof setShowRedirectOption === 'function') {
+          setShowRedirectOption(true);
+        }
       } else {
-        // Direct error handling here instead of calling handleAuthError
-        console.error('Auth error:', error);
+        // Direct error handling for other errors
         const errorMessage = error?.message || 'Authentication failed';
         if (typeof setAuthError === 'function') {
           setAuthError(errorMessage);

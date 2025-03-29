@@ -1,35 +1,32 @@
 // Refactored loginHook.js with improved modularity and organization
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@context/AuthContext';
+import { useAuth } from '@context/AuthContext'; // Assuming path is correct
 import * as Yup from 'yup';
-import { useSnackbar } from '@shared/index';
-import authService from '@services/authService';
+import { useSnackbar } from '@shared/index'; // Assuming path is correct
+import authService from '@services/authService'; // Assuming path is correct
 
+/**
+ * Custom hook for handling login logic, including email/password,
+ * Google Sign-In, and account deactivation/reactivation flows.
+ */
 export const useLogin = () => {
+  // --- Hooks ---
   const { login: contextLogin, googleSignIn: contextGoogleSignIn, setUser, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useSnackbar();
 
-  // State management
+  // --- State Management ---
   const [isLoading, setIsLoading] = useState(false);
-  const [authError, setAuthError] = useState(null);
-  const [recoveryEmail, setRecoveryEmail] = useState(location.state?.email || ''); // Pre-fill if coming from reactivation attempt
-  const [showRedirectOption, setShowRedirectOption] = useState(false);
-  // Store more detailed deactivation info
-  const [deactivationInfo, setDeactivationInfo] = useState(location.state?.isDeactivated ? {
-      email: location.state?.email,
-      isAuto: location.state?.isAutoDeactivated,
-      message: location.state?.message, // Carry over messages from navigation state
-      emailSent: location.state?.emailSent,
-      hasError: location.state?.hasError
-  } : null);
-  // Use deactivationInfo to determine if the account is generally deactivated
-  const [isDeactivated, setIsDeactivated] = useState(!!location.state?.isDeactivated);
+  const [authError, setAuthError] = useState(null); // Stores error messages for display
+  const [recoveryEmail, setRecoveryEmail] = useState(''); // For the reactivation email input
+  const [showRedirectOption, setShowRedirectOption] = useState(false); // For Google redirect fallback
+  const [deactivationInfo, setDeactivationInfo] = useState(null); // Detailed info for deactivated accounts
+  const [isDeactivated, setIsDeactivated] = useState(false); // Flag if current focus is a deactivated account
 
-  // Validation configuration
+  // --- Validation Schema (Formik) ---
   const validationSchema = Yup.object({
     email: Yup.string()
       .email('Invalid email format')
@@ -38,485 +35,490 @@ export const useLogin = () => {
       .required('Password is required')
   });
 
-  const initialValues = {
-    email: location.state?.email || '', // Pre-fill email from state if available
+  // --- Formik Initial Values ---
+  // Updated via useEffect based on navigation state
+  const [initialFormValues, setInitialFormValues] = useState({
+    email: '',
     password: ''
-  };
+  });
 
-  // --- Helper functions ---
+
+  // --- Effect to Sync with Location State ---
+  // Handles pre-filling form or setting deactivated state if navigated from other flows
+  useEffect(() => {
+    let emailFromState = '';
+    let shouldSetDeactivated = false;
+    let newDeactivationInfo = null;
+
+    if (location.state) {
+      const { email, isDeactivated: locIsDeactivated, isAutoDeactivated, message, emailSent, hasError, lockoutRemaining } = location.state;
+
+      if (email) {
+        emailFromState = email;
+        setRecoveryEmail(email); // Keep recovery separate in case form email is cleared
+      }
+
+      if (locIsDeactivated) {
+        shouldSetDeactivated = true;
+        newDeactivationInfo = {
+          email: email || '',
+          isAuto: isAutoDeactivated ?? false,
+          message: message || "Your account is deactivated.",
+          emailSent: emailSent ?? false,
+          hasError: hasError ?? false,
+          lockoutRemaining: lockoutRemaining || 0
+        };
+      }
+    }
+    // Update Formik initial values state *once*
+    setInitialFormValues(prev => ({ ...prev, email: emailFromState }));
+    // Update deactivation state
+    setIsDeactivated(shouldSetDeactivated);
+    setDeactivationInfo(newDeactivationInfo);
+
+  }, [location.state, navigate]); // Depend on location.state
+
+
+  // --- Helper Functions ---
   const startLoading = () => setIsLoading(true);
   const stopLoading = () => setIsLoading(false);
 
   const showSuccessToast = (userData) => {
-    toast.success(`Welcome back, ${userData.firstName || 'User'}!`);
+    toast.success(`Welcome back, ${userData?.firstName || 'User'}!`);
   };
 
-  const showErrorToast = (error) => {
-    console.error('Auth error:', error);
-    const errorMessage = error?.message || 'Authentication failed';
-    setAuthError(errorMessage);
-    toast.error(errorMessage);
-  };
-
-  // Store user data in localStorage and context
+  // --- Store User Data (Core Auth Logic) ---
   const storeUserData = (user, accessToken) => {
-    // Ensure user data has essential fields, default if necessary
-    const verifiedUser = {
-        id: user?.id || '', // Ensure id is present
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '', // Ensure email is present
-        role: user?.role || 'user', // Default role
-        ...user, // Spread the rest of the user data
-        isVerified: true, // Explicitly set as verified upon successful storage
-        // Keep accessToken if provided separately or within user object
-        accessToken: accessToken || user?.accessToken || localStorage.getItem('authToken') || ''
-    };
-
-
-    localStorage.setItem('user', JSON.stringify(verifiedUser));
-
-    // Store token separately as well if available
-    const tokenToStore = accessToken || user?.accessToken;
-    if (tokenToStore) {
-        localStorage.setItem('authToken', tokenToStore);
+    if (!user || !user.email) {
+      console.error("storeUserData called with invalid user object:", user);
+      return null; // Return null or handle appropriately
     }
-
-    setUser(verifiedUser);
-    setIsAuthenticated(true);
-
+    const verifiedUser = {
+      id: user.id || '', // Ensure ID exists
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email, // Already checked
+      role: user.role || 'user',
+      ...user, // Spread other user properties
+      isVerified: true, // Assume verified at this stage
+      // Ensure token is stored, prioritizing function arg, then user obj, then localStorage (fallback)
+      accessToken: accessToken || user.accessToken || localStorage.getItem('authToken') || ''
+    };
+    localStorage.setItem('user', JSON.stringify(verifiedUser));
+    if (verifiedUser.accessToken) {
+      localStorage.setItem('authToken', verifiedUser.accessToken);
+    } else {
+      localStorage.removeItem('authToken'); // Clear if no token provided
+    }
+    setUser(verifiedUser); // Update auth context state
+    setIsAuthenticated(true); // Update auth context state
     return verifiedUser;
   };
 
-
-  // Handle navigation based on user role
+  // --- Navigate After Auth (Core Navigation Logic) ---
   const navigateAfterAuth = (user) => {
-    const targetPath = user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-    console.log(`Navigating ${user.role} to ${targetPath}`);
-    // Clear any auth-related state from location before navigating away
-    navigate(targetPath, { replace: true, state: {} });
+    const role = user?.role || 'user'; // Default to 'user' role
+    const targetPath = role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    console.log(`Navigating ${role} to ${targetPath}`);
+    navigate(targetPath, { replace: true, state: {} }); // Navigate and clear location state
   };
 
-  // --- Reactivation Handlers ---
 
-  // NEW: Generic handler for deactivated accounts
+  // --- Reactivation Flow Handlers ---
+
+  /**
+   * Handles the process of requesting a reactivation email for a deactivated account.
+   * Manages loading state, displays toasts, updates deactivationInfo state, and navigates.
+   * @param {string} email - The email of the account to reactivate.
+   * @param {boolean} isAuto - Whether the deactivation was automatic (due to inactivity).
+   * @param {object|null} initialStatusCheck - Optional result from a prior checkAccountStatus call.
+   */
   const handleDeactivatedAccountFlow = async (email, isAuto, initialStatusCheck = null) => {
-      console.log(`Handling deactivated account flow (Auto: ${isAuto}) for:`, email);
-      startLoading(); // Ensure loading indicator
+    console.log(`Handling deactivated account flow (Auto: ${isAuto}) for:`, email);
+    startLoading();
 
-      // Update state
-      setIsDeactivated(true); // General flag
-      setRecoveryEmail(email);
-      const currentDeactivationInfo = { // Build info object
-          email,
-          isAuto,
-          deactivatedAt: initialStatusCheck?.deactivatedAt,
-          tokenExpired: initialStatusCheck?.tokenExpired,
-          message: isAuto
-              ? "Your account was deactivated due to inactivity. Sending reactivation email..."
-              : "Your account has been deactivated. Sending reactivation email...",
-          emailSent: false, // Assume not sent yet
-          hasError: false
-      };
-      setDeactivationInfo(currentDeactivationInfo);
+    setIsDeactivated(true); // Ensure UI reflects deactivation mode
+    setRecoveryEmail(email);
 
+    // Consolidate info, prioritize fresh check results for lockout
+    const lockoutRem = initialStatusCheck?.lockoutRemaining || 0;
+    const currentInfo = {
+      email, isAuto,
+      deactivatedAt: initialStatusCheck?.deactivatedAt,
+      tokenExpired: initialStatusCheck?.tokenExpired,
+      lockoutRemaining: lockoutRem,
+      message: `Account deactivated. ${lockoutRem > 0 ? 'Reactivation locked.' : 'Sending reactivation email...'}`,
+      emailSent: false, hasError: false
+    };
+    setDeactivationInfo(currentInfo);
 
-      const reason = isAuto ? "inactivity" : "administrator action";
-      toast.info(`Account deactivated due to ${reason}. Sending reactivation email...`);
+    // --- Lockout Check ---
+    if (lockoutRem > 0) {
+      const waitMinutes = Math.ceil(lockoutRem / 60);
+      toast.warn(`Too many reactivation attempts. Please wait ${waitMinutes} minutes.`);
+      // Optionally navigate back to login immediately, passing state
+      // navigate('/login', { state: { ...currentInfo, isDeactivated: true }, replace: true });
+      stopLoading();
+      return; // Stop if locked out
+    }
 
-      try {
-          console.log('Sending reactivation request to server...');
-          const reactivationResult = await authService.requestReactivation(email);
-          console.log('Reactivation request response:', reactivationResult);
+    // --- Request Reactivation Email ---
+    const reason = isAuto ? "inactivity" : "manual action";
+    toast.info(`Account deactivated due to ${reason}. Sending reactivation email...`);
 
-          if (reactivationResult.success) {
-              toast.success("Reactivation email sent successfully. Please check your inbox.");
-              // Navigate back to login or a dedicated page, clearly indicating success
-              currentDeactivationInfo.emailSent = true;
-              currentDeactivationInfo.message = `Your account is deactivated. A reactivation link has been sent to ${email}. Check your inbox.`;
-              navigate('/login', { // Or maybe '/reactivation-sent'
-                  state: { ...currentDeactivationInfo }, // Pass updated info
-                  replace: true
-              });
-          } else {
-              // Handle failure to send email
-              toast.error(reactivationResult.message || "Problem sending reactivation email. Please try again.");
-              currentDeactivationInfo.hasError = true;
-              currentDeactivationInfo.message = reactivationResult.message || "We encountered an issue sending the reactivation email. You can request a new one below.";
-              // Navigate to a page where they can manually request again
-              navigate('/reactivate-account', {
-                  state: { ...currentDeactivationInfo }, // Pass updated info with error
-                  replace: true
-              });
-          }
-      } catch (error) {
-          console.error('Critical error during reactivation request:', error);
-          toast.error("An unexpected error occurred while requesting reactivation. Please try again.");
-          currentDeactivationInfo.hasError = true;
-          currentDeactivationInfo.message = "We encountered a technical issue. Please try requesting a new reactivation email.";
-           navigate('/reactivate-account', {
-              state: { ...currentDeactivationInfo }, // Pass updated info with error
-              replace: true
-           });
-      } finally {
-          stopLoading(); // Ensure loading stops
+    try {
+      const reactivationResult = await authService.requestReactivation(email);
+      console.log('Reactivation request response:', reactivationResult);
+
+      if (reactivationResult.success) {
+        toast.success("Reactivation email sent. Please check your inbox (and spam folder).");
+        currentInfo.emailSent = true;
+        currentInfo.message = `Reactivation link sent to ${email}. Check your inbox.`;
+        setDeactivationInfo({ ...currentInfo });
+        // Stay on login page or navigate, passing updated state
+        // navigate('/login', { state: { ...currentInfo, isDeactivated: true }, replace: true }); // Example nav
+      } else {
+        toast.error(reactivationResult.message || "Problem sending reactivation email.");
+        currentInfo.hasError = true;
+        currentInfo.message = reactivationResult.message || "Failed to send email. Try again?";
+        setDeactivationInfo({ ...currentInfo });
+        // Optionally navigate to specific reactivation page on error
+        // navigate('/reactivate-account', { state: { ...currentInfo, isDeactivated: true }, replace: true });
       }
+    } catch (error) {
+      console.error('Critical error during reactivation request:', error);
+      toast.error("An unexpected server error occurred. Please try again later.");
+      currentInfo.hasError = true;
+      currentInfo.message = "Technical issue sending email. Please try again later.";
+      setDeactivationInfo({ ...currentInfo });
+      // Optionally navigate
+      // navigate('/reactivate-account', { state: { ...currentInfo, isDeactivated: true }, replace: true });
+    } finally {
+      stopLoading();
+    }
   };
 
-
-  // Handles the result *after* clicking a reactivation link
+  /**
+   * Handles the outcome after a user clicks a reactivation link.
+   * Assumes this is called from a component handling the reactivation token.
+   * @param {object} result - The result object from authService.recoverAccount.
+   */
   const handleReactivatedAccount = async (result) => {
-      stopLoading(); // Make sure loading stops if it was initiated by reactivation process
-      if (!result.user || !result.user.email) { // Ensure we have user data
-          toast.error(result.message || 'Reactivation successful, but failed to load user data. Please log in.');
-          navigate('/login', { replace: true, state: { email: result.user?.email || recoveryEmail } });
-          return;
-      }
-
-      const userData = storeUserData(result.user, result.token || result.user.accessToken); // Use token if provided separately
-      toast.success(result.message || "Account reactivated. Welcome back!");
+    stopLoading();
+    if (!result?.success || !result?.user || !result?.user.email) {
+      toast.error(result?.message || 'Reactivation failed or user data missing. Please try logging in.');
+      navigate('/login', { replace: true, state: { email: result?.user?.email || recoveryEmail } });
+      return;
+    }
+    const userData = storeUserData(result.user, result.token || result.user.accessToken);
+    if (userData) {
+      toast.success(result.message || "Account reactivated successfully!");
       navigateAfterAuth(userData);
+    } else {
+      // Handle case where storeUserData failed
+      toast.error('Reactivation succeeded but failed to log in. Please try logging in manually.');
+      navigate('/login', { replace: true, state: { email: result.user.email } });
+    }
   };
 
-
-  // Triggered by a button press, e.g., on the /reactivate-account page
+  /**
+   * Triggered by a manual user action (e.g., clicking "Resend Link").
+   * @param {string} emailToRequest - The email to request reactivation for.
+   */
   const handleRequestReactivation = async (emailToRequest) => {
-      const targetEmail = emailToRequest || recoveryEmail; // Use passed email or state
-      if (!targetEmail) {
-          toast.error("Email is required to request reactivation.");
-          return;
-      }
-      console.log("Manual request reactivation triggered for:", targetEmail);
-      // Call the main flow handler, passing the email and assuming 'isAuto' doesn't matter here
-      // or determine 'isAuto' based on stored deactivationInfo if available
-      const isCurrentlyAuto = deactivationInfo?.email === targetEmail ? deactivationInfo.isAuto : false;
-      await handleDeactivatedAccountFlow(targetEmail, isCurrentlyAuto);
+    const targetEmail = emailToRequest || recoveryEmail;
+    if (!targetEmail) {
+      toast.error("Email address is required to request reactivation.");
+      return;
+    }
+    console.log("Manual request reactivation triggered for:", targetEmail);
+    // Check status again before sending to get latest lockout info
+    startLoading();
+    let statusCheck = null;
+    try {
+      statusCheck = await authService.checkAccountStatus(targetEmail);
+    } catch (error) {
+      console.error("Failed to check status before manual reactivation request:", error);
+      toast.error("Failed to check account status. Please try again.");
+      stopLoading();
+      return;
+    } finally {
+      // Don't stopLoading here if status check succeeded, handleDeactivatedAccountFlow will do it
+      if (!statusCheck) stopLoading();
+    }
+
+    // Proceed with the flow, using the latest status check result
+    const isCurrentlyAuto = statusCheck?.isAutoDeactivated ?? deactivationInfo?.isAuto ?? false;
+    await handleDeactivatedAccountFlow(targetEmail, isCurrentlyAuto, statusCheck);
   };
 
 
   // --- Authentication Handlers ---
+
+  /** Handles navigation to the email verification page */
   const handleVerificationRequired = (result) => {
     stopLoading();
-    const userId = result.userId || result.user?.id; // Get userId reliably
-    const userEmail = result.email || result.user?.email; // Get email reliably
-
+    const userId = result?.userId || result?.user?.id;
+    const userEmail = result?.email || result?.user?.email;
     if (!userId || !userEmail) {
       console.error("Missing userId or email for verification redirection", result);
-      toast.error("An error occurred. Cannot proceed with email verification.");
+      toast.error("Verification error. Please try logging in again.");
       setAuthError("Missing user details for verification.");
       return;
     }
-
-    navigate('/verify-email', {
-      state: {
-        userId: userId,
-        email: userEmail
-      },
-      replace: true // Replace login history entry
-    });
-    toast.info(result.message || "Please check your email to verify your account.");
+    navigate('/verify-email', { state: { userId, email: userEmail }, replace: true });
+    toast.info(result?.message || "Please check your email to verify your account.");
   };
 
+  /** Handles successful sign-in/reactivation final steps */
   const handleSuccessfulSignIn = async (result) => {
     stopLoading();
-    if (!result.user || !result.user.email) { // Validate essential user data
-      console.error('Invalid user data received on successful sign-in:', result);
-      toast.error('Authentication successful, but user data is incomplete. Please try again.');
-      setAuthError('Incomplete user data received from server.');
-      // Clear potentially bad state
+    if (!result?.user || !result?.user?.email) {
+      console.error('Invalid user data on successful sign-in:', result);
+      toast.error('Authentication error: Failed to load user details.');
+      setAuthError('Incomplete user data received.');
       localStorage.removeItem('user');
       localStorage.removeItem('authToken');
       setUser(null);
       setIsAuthenticated(false);
       return;
     }
-
     const userData = storeUserData(result.user, result.token || result.user.accessToken);
-    showSuccessToast(userData); // Use the specific success toast
-    navigateAfterAuth(userData);
+    if (userData) {
+      showSuccessToast(userData);
+      navigateAfterAuth(userData);
+    } else {
+      toast.error('Login succeeded but failed to store session. Please try again.');
+      setAuthError('Failed to store user session.');
+    }
   };
 
-
+  /** Handles errors specifically from Google Sign-In attempts */
   const handleGoogleSignInError = (error) => {
     stopLoading();
     console.error('Google sign-in error handler:', error);
+    let errorMessage = error?.message || 'Google sign-in failed';
 
-    let errorMessage = error.message || 'Google sign-in failed';
-
-    if (error.code === 'auth/popup-closed-by-user' || error.message?.includes('cancelled')) {
-      errorMessage = 'Sign-in process was cancelled';
-      // Don't show an error toast, maybe an info toast or nothing
-      // toast.info('Sign-in cancelled');
-    } else if (error.code === 'auth/popup-blocked' || error.message?.includes('popup was blocked')) {
-      errorMessage = 'Sign-in popup was blocked. Please enable popups in your browser settings.';
-      toast.error(errorMessage); // Show error as it requires user action
-      setShowRedirectOption(true); // Offer redirect as an alternative
-    } else if (error.message?.includes('Network Error') || error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error during sign-in. Please check your connection.';
-        toast.error(errorMessage);
-    } else if (error.message?.includes('ACCOUNT_DEACTIVATED')) { // Handle specific backend error if passed through
-        const emailOnError = error.email || recoveryEmail; // Try to get email from error or state
-        errorMessage = error.message; // Use the specific message
-        if (emailOnError) {
-            handleDeactivatedAccountFlow(emailOnError, error.isAutoDeactivated ?? false); // Trigger reactivation flow
-            // Don't show a generic error toast here as the flow handles notifications
-            return; // Stop further error handling for this case
-        } else {
-            toast.error("Your account is deactivated, but we couldn't identify your email to help reactivate.");
-        }
-    }
-    else {
-      // For other errors, show a generic error toast
+    if (error?.code === 'auth/popup-closed-by-user' || error?.message?.includes('cancelled')) {
+      errorMessage = 'Sign-in process was cancelled.';
+      // Don't show error toast for cancellation
+    } else if (error?.code === 'auth/popup-blocked' || error?.message?.includes('popup was blocked')) {
+      errorMessage = 'Sign-in popup blocked. Please enable popups or try the redirect option.';
+      toast.error(errorMessage);
+      setShowRedirectOption(true);
+    } else if (error?.message?.includes('Network Error') || error?.code === 'auth/network-request-failed') {
+      errorMessage = 'Network error during sign-in. Please check your connection.';
+      toast.error(errorMessage);
+    } else if (error?.message?.includes('ACCOUNT_DEACTIVATED')) {
+      // This should be handled *before* full sign-in, but acts as fallback
+      const emailOnError = error?.email || recoveryEmail;
+      errorMessage = error.message;
+      if (emailOnError && !isDeactivated) { // Avoid duplicate flows
+        handleDeactivatedAccountFlow(emailOnError, error?.isAutoDeactivated ?? false);
+        return; // Stop processing here, flow handles UI
+      } else if (!emailOnError) {
+        toast.error("Account deactivated, but email is unknown.");
+      }
+      // If already deactivated, flow is likely running, so do nothing more
+    } else {
+      // Generic error for other cases
       toast.error(errorMessage);
     }
-
-    setAuthError(errorMessage); // Set the error state regardless
+    setAuthError(errorMessage); // Set error state for display
   };
 
 
   // --- Main Authentication Flows ---
 
-  // Email/Password Login
+  /** Handles Email/Password form submission */
   const handleSubmit = async (values, { setSubmitting }) => {
-    console.log('Login attempt:', { email: values.email });
+    console.log('Manual Login attempt:', { email: values.email });
     setSubmitting(true);
     setAuthError(null);
-    setIsDeactivated(false); // Reset deactivation state on new attempt
+    setIsDeactivated(false);
     setDeactivationInfo(null);
     startLoading();
 
     let statusCheck = null;
     try {
-      // 1. Check account status first
+      // Step 1: Check account status
       statusCheck = await authService.checkAccountStatus(values.email);
       console.log('Account status check result:', statusCheck);
 
-      // *** MODIFIED CHECK ***
-      // 2. If account exists but is NOT active (covers manual and auto deactivation)
-      if (statusCheck.exists && !statusCheck.isActive) {
-        console.log(`Account is deactivated (Auto: ${statusCheck.isAutoDeactivated}). Triggering reactivation flow.`);
-        // Trigger the reactivation flow AND STOP further execution
-        await handleDeactivatedAccountFlow(values.email, statusCheck.isAutoDeactivated, statusCheck);
-        setSubmitting(false); // Ensure form is not submitting anymore
-        // stopLoading(); // handleDeactivatedAccountFlow handles its own loading state
-        return; // IMPORTANT: Stop handleSubmit here
+      // Destructure flags for checks
+      const {
+        exists = false, isActive = false, isAutoDeactivated = false,
+        isGoogleLinked = false, hasPasswordSet = false // <-- These are crucial
+      } = statusCheck;
+
+      // Step 2: Handle Deactivation
+      if (exists && !isActive) {
+        console.log(`Account is deactivated (Auto: ${isAutoDeactivated}). Triggering reactivation flow.`);
+        await handleDeactivatedAccountFlow(values.email, isAutoDeactivated, statusCheck);
+        setSubmitting(false);
+        return; // Stop flow
       }
 
-      // 3. If account is active or doesn't exist yet (let backend handle non-existent), proceed to login attempt
-      console.log('Account is active or does not exist, proceeding with login attempt.');
+      // *** Step 3: Handle Google-Only Account Attempting Password Login ***
+      if (exists && isActive && isGoogleLinked && !hasPasswordSet) {
+        console.log('Password login attempt for Google-only account rejected.');
+        const errMsg = "This account uses Google Sign-In. Please use the 'Sign in with Google' button.";
+        setAuthError(errMsg);
+        toast.error(errMsg);
+        stopLoading();
+        setSubmitting(false);
+        return; // Stop flow
+      }
+
+      // Step 4: Proceed with Password Login via Context
+      console.log('Account status OK for password login, calling contextLogin.');
       const result = await contextLogin(values.email, values.password);
-      console.log('Login result:', result);
+      console.log('Login result from context:', result);
 
-      // 4. Handle potential reactivation during login (backend might reactivate implicitly)
+      // Step 5: Handle Implicit Reactivation during login
       if (result?.wasReactivated) {
-          console.log('Account was reactivated during login process.');
-          await handleReactivatedAccount(result);
-          setSubmitting(false);
-          return; // Stop processing
+        console.log('Account implicitly reactivated during login.');
+        await handleReactivatedAccount(result);
+        setSubmitting(false);
+        return;
       }
 
-      // 5. Handle general login failures returned by contextLogin/authService.login
-      // Note: This assumes contextLogin forwards success/failure status correctly
-      if (!result || !result.success) {
-          // We might get here if the password is wrong for an *active* account
-          const errorMessage = result?.message || 'Login failed. Please check your credentials.';
-          console.error("Login failed:", errorMessage, result);
-          setAuthError(errorMessage);
-          toast.error(errorMessage);
-          stopLoading();
-          setSubmitting(false);
-          return;
+      // Step 6: Handle Login Failure (e.g., wrong password)
+      if (!result?.success) {
+        const errorMessage = result?.message || 'Login failed. Check email/password.';
+        console.error("Login failed:", errorMessage, result);
+        setAuthError(errorMessage);
+        toast.error(errorMessage);
+        stopLoading();
+        setSubmitting(false);
+        return;
       }
 
-      // 6. Handle missing user data after a supposed success
+      // Step 7: Handle Missing User Data after successful call
       if (!result.user || !result.user.email) {
-          console.error('Login successful but user data is missing/invalid:', result);
-          toast.error('Login succeeded but failed to retrieve user details. Please try again.');
-          setAuthError('Invalid user data received from server.');
-          stopLoading();
-          setSubmitting(false);
-          return;
+        console.error('Login succeeded but user data missing:', result);
+        toast.error('Login error: Failed to load user details.');
+        setAuthError('Invalid user data from server.');
+        stopLoading();
+        setSubmitting(false);
+        return;
       }
 
-      // 7. Handle verification requirement
-      // Check both explicit flag and user object property for robustness
-      const needsVerification = result.requireVerification === true || (result.user && result.user.isVerified === false);
-      console.log('Checking verification status:', {
-          needsVerification,
-          requireVerificationFlag: result.requireVerification,
-          userIsVerified: result.user?.isVerified
-      });
-
+      // Step 8: Handle Email Verification Requirement
+      const needsVerification = result.requireVerification === true || (result.user?.isVerified === false);
       if (needsVerification) {
-          console.log('Server requires email verification.');
-          handleVerificationRequired({
-              userId: result.user.id, // Ensure ID is passed
-              email: result.user.email, // Ensure email is passed
-              message: result.message || 'Please verify your email.'
-          });
-          // stopLoading(); // handleVerificationRequired stops loading
-          setSubmitting(false);
-          return; // Stop processing
+        console.log('Email verification required.');
+        handleVerificationRequired({ userId: result.user.id, email: result.user.email, message: result.message });
+        setSubmitting(false);
+        return;
       }
 
-      // 8. Normal successful login for verified user
-      console.log('User considered verified, proceeding with successful sign-in handler.');
+      // Step 9: Successful Login
+      console.log('Manual login successful and verified.');
       await handleSuccessfulSignIn(result);
-      // stopLoading(); // handleSuccessfulSignIn stops loading
-      setSubmitting(false); // Already handled? Ensure it is.
+      setSubmitting(false);
 
     } catch (error) {
-        console.error('Error during login submission process:', error);
-        stopLoading(); // Ensure loading stops on any error
-        setSubmitting(false); // Ensure form is not submitting
+      console.error('Error during manual login submission:', error);
+      stopLoading();
+      setSubmitting(false);
 
-        // *** FALLBACK CHECK for Deactivation ***
-        // Check if the error specifically indicates a deactivated account
-        // This is crucial if the backend is fixed to return 403/401 instead of 500
-        const isDeactivationError = error.response?.data?.error === 'ACCOUNT_DEACTIVATED' ||
-                                   error.message?.toLowerCase().includes('deactivated');
-
-        if (isDeactivationError) {
-             console.warn('Login attempt failed specifically due to deactivation (caught in error handler) - triggering reactivation flow as fallback.');
-             // Try to get details from error or fallback to form values/initial status check
-             const emailOnError = error.response?.data?.email || values.email;
-             const isAutoOnError = error.response?.data?.isAutoDeactivated ?? statusCheck?.isAutoDeactivated ?? false;
-             await handleDeactivatedAccountFlow(emailOnError, isAutoOnError, statusCheck);
-        } else {
-             // Handle other errors (wrong password, network, 500 errors *not* related to deactivation)
-             const generalErrorMessage = error.response?.data?.message || error.message || 'Authentication failed. Please try again.';
-             setAuthError(generalErrorMessage);
-             toast.error(generalErrorMessage);
-        }
+      // Fallback Deactivation Check (if API call failed earlier)
+      const isDeactivationError = error?.response?.data?.error === 'ACCOUNT_DEACTIVATED' || error?.message?.toLowerCase().includes('deactivated');
+      if (isDeactivationError && !isDeactivated) {
+        console.warn('Manual login failed due to deactivation (caught in error handler).');
+        const emailOnError = error?.response?.data?.email || values.email;
+        const isAutoOnError = error?.response?.data?.isAutoDeactivated ?? statusCheck?.isAutoDeactivated ?? false;
+        await handleDeactivatedAccountFlow(emailOnError, isAutoOnError, statusCheck);
+      } else if (!isDeactivationError) { // Avoid duplicate errors
+        const generalErrorMessage = error?.response?.data?.message || error?.message || 'Authentication failed.';
+        setAuthError(generalErrorMessage);
+        toast.error(generalErrorMessage);
+      }
     }
-    // No finally block needed for setSubmitting/stopLoading as it's handled in all paths
   };
 
 
-  // Google Sign-In
+  // Modify handleGoogleSignIn function in loginHook.js
   const handleGoogleSignIn = async () => {
     setAuthError(null);
     setShowRedirectOption(false);
-    setIsDeactivated(false); // Reset deactivation state
+    setIsDeactivated(false);
     setDeactivationInfo(null);
     startLoading();
-
-    let googleAuthResult = null;
-    let statusCheck = null;
+  
     try {
-      // 1. Initiate Google Sign-In with Firebase/Backend
-      console.log('Starting Google sign-in attempt via context');
-      googleAuthResult = await contextGoogleSignIn(); // This calls authService.googleSignIn
-      console.log('Google sign-in result received from context:', googleAuthResult);
-
-      // If Google sign-in itself failed at the authService level (e.g., popup closed, network error before backend call)
-      if (!googleAuthResult || (!googleAuthResult.success && !googleAuthResult.email && !googleAuthResult.requireVerification && !googleAuthResult.isDeactivated)) {
-         // Errors like popup closed are often handled internally or don't need a generic error message.
-         // Relying on handleGoogleSignInError for specific cases.
-         // If googleAuthResult exists but isn't success and doesn't fit other categories, throw its message.
-         if (googleAuthResult && googleAuthResult.message) {
-            throw new Error(googleAuthResult.message);
-         } else if (!googleAuthResult) {
-            // This case might occur if contextGoogleSignIn returns null/undefined on failure
-            throw new Error('Google sign-in failed or was cancelled.');
-         }
-         // Otherwise, the error might have been handled (like popup closed), so just stop loading.
-         stopLoading();
-         return;
+      // Direct single-step Google sign-in
+      console.log('Starting Google sign-in process');
+      const result = await contextGoogleSignIn();
+      console.log('Google sign-in result:', result);
+      
+      // Process the result based on status
+      if (result?.isDeactivated || result?.isAutoDeactivated) {
+        const email = result.email || '';
+        const isAuto = result.isAutoDeactivated || false;
+        await handleDeactivatedAccountFlow(email, isAuto);
+        return;
       }
-
-
-      // --- We have some result from Google/Backend ---
-
-      // 2. Check for explicit deactivation response from backend during Google Sign-in
-      // (authService.googleSignIn might already check this via its backend call)
-      if (googleAuthResult.isDeactivated) {
-          console.log('Google sign-in response indicates account is deactivated.');
-          // Need the email to proceed
-          const emailForReactivation = googleAuthResult.email;
-          if (emailForReactivation) {
-              await handleDeactivatedAccountFlow(emailForReactivation, googleAuthResult.isAutoDeactivated ?? false);
-          } else {
-              toast.error("Account is deactivated, but email is missing. Cannot start reactivation.");
-              setAuthError("Account deactivated - email unknown.");
-          }
-          stopLoading();
-          return; // Stop processing
+      
+      if (result?.requireVerification) {
+        handleVerificationRequired(result);
+        return;
       }
-
-
-      // 3. If not explicitly deactivated by backend, but we have an email, check status manually
-      // This is a belt-and-suspenders approach in case the google-signin endpoint doesn't return deactivation status reliably.
-      const emailFromGoogle = googleAuthResult.email || googleAuthResult.user?.email;
-      if (emailFromGoogle) {
-          console.log("Checking account status independently after Google Sign-in for:", emailFromGoogle);
-          statusCheck = await authService.checkAccountStatus(emailFromGoogle);
-          console.log('Independent status check result:', statusCheck);
-
-          if (statusCheck.exists && !statusCheck.isActive) {
-              console.log(`Account status check shows deactivated (Auto: ${statusCheck.isAutoDeactivated}). Triggering flow.`);
-              await handleDeactivatedAccountFlow(emailFromGoogle, statusCheck.isAutoDeactivated, statusCheck);
-              stopLoading();
-              return; // Stop processing
-          }
+      
+      if (result?.success && result?.user) {
+        await handleSuccessfulSignIn(result);
+        return;
       }
-
-
-      // 4. Handle potential reactivation during Google sign-in
-      if (googleAuthResult.wasReactivated) {
-          console.log('Account was reactivated during Google sign-in process.');
-          await handleReactivatedAccount(googleAuthResult);
-          return; // Stop processing
-      }
-
-      // 5. Handle verification requirement returned by Google sign-in process
-      if (googleAuthResult.requireVerification === true) {
-          console.log('Google sign-in process requires email verification.');
-          handleVerificationRequired(googleAuthResult);
-          return; // Stop processing
-      }
-
-
-      // 6. Handle successful Google sign-in
-      if (googleAuthResult.success && googleAuthResult.user) {
-          console.log('Google sign-in successful, proceeding.');
-          await handleSuccessfulSignIn(googleAuthResult);
-          return; // Stop processing
-      }
-
-      // 7. If we reach here, something went wrong, but wasn't caught by specific cases
-      console.warn("Google Sign-In flow reached unexpected state:", googleAuthResult);
-      throw new Error(googleAuthResult?.message || 'Google authentication failed after backend interaction.');
-
-
+      
+      // Unexpected result
+      console.warn("Unexpected Google Sign-In outcome:", result);
+      throw new Error(result?.message || 'Google authentication failed.');
     } catch (error) {
-        console.error('Error during Google Sign-In process:', error);
-        // Pass the error AND the partial result (if any) to the handler
-        handleGoogleSignInError(error); // This function will stop loading and show appropriate messages
+      console.error('Error during Google Sign-In:', error);
+      
+      // Check error response for deactivation information
+      if (error.response?.data?.isDeactivated || 
+          (error.response?.data?.message && error.response?.data?.message.includes('deactivated'))) {
+        console.log('Deactivation info found in error response:', error.response.data);
+        const email = error.response.data.email || '';
+        const isAuto = error.response.data.isAutoDeactivated || false;
+        await handleDeactivatedAccountFlow(email, isAuto);
+        return;
+      }
+      
+      // Special handling for popup blocking to make it clear to users
+      if (error.code === 'auth/popup-blocked' || 
+          (error.message && error.message.includes('popup was blocked'))) {
+        setShowRedirectOption(true);
+        toast.error("Sign-in popup was blocked. Please enable popups or use the redirect option below.");
+        setAuthError("Your browser blocked the sign-in popup. Please enable popups for this site or use the redirect method below.");
+      } else {
+        // Use general error handler for other errors
+        handleGoogleSignInError(error);
+      }
+    } finally {
+      stopLoading();
     }
-    // No finally block needed, handled within try/catch paths and error handler
   };
 
 
-  // Google Redirect Sign-In (Initiation)
+  /** Handles Google Sign-In via Redirect button click */
   const handleGoogleRedirectSignIn = async () => {
     try {
-      setAuthError(null);
-      startLoading();
-      toast.info("Redirecting to Google for sign-in...");
-      await authService.googleSignInWithRedirect();
-      // Browser redirects away, stopLoading() might not execute if redirect is instant.
-      // No explicit stopLoading() needed here as the page context is lost.
+      setAuthError(null); startLoading();
+      toast.info("Redirecting to Google...");
+      await authService.googleSignInWithRedirect(); // Navigates away
     } catch (error) {
-      console.error('Google redirect sign-in initiation error:', error);
-      setAuthError(error.message || 'Google sign-in redirect failed');
-      toast.error(error.message || 'Google sign-in redirect failed');
-      stopLoading(); // Stop loading only if the redirect initiation fails
+      console.error('Google redirect init error:', error);
+      setAuthError(error?.message || 'Google redirect failed.');
+      toast.error(error?.message || 'Google redirect failed.');
+      stopLoading(); // Only stop if init fails
     }
   };
 
 
-  // --- Return Values ---
+  // --- Returned Values from Hook ---
   return {
     isLoading,
     authError,
@@ -524,13 +526,13 @@ export const useLogin = () => {
     handleGoogleSignIn,
     handleGoogleRedirectSignIn,
     showRedirectOption,
-    initialValues,
+    initialValues: initialFormValues, // Use the state variable for initial values
     validationSchema,
-    // Account reactivation props
-    isDeactivated, // Use this general flag in the UI
+    // Deactivation props
+    isDeactivated,
     recoveryEmail,
-    setRecoveryEmail, // Allow setting email perhaps from URL params
-    handleRequestReactivation, // Expose the manual request handler
-    deactivationInfo // Expose detailed info for potential UI display
+    setRecoveryEmail,
+    handleRequestReactivation,
+    deactivationInfo
   };
 };
