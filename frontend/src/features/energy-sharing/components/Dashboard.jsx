@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Paper, Box, Typography, Card, CardContent, Chip, Grid, Divider, IconButton, Tooltip } from '@mui/material';
 import { LocateIcon, Info, RefreshCw, BarChart2, MapPin, Zap, ZapOff } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { ring2 } from 'ldrs';
 
 // Import API utility with Railway fallback
 import { railwayApi } from '@modules/api';
@@ -263,9 +264,10 @@ const SummaryCard = ({ locationsWithTotals }) => {
 
 // Main Component
 const EnergySharing = () => {
-  // Initialize Leaflet icons
+  // Initialize Leaflet icons and LDRS spinner
   useEffect(() => {
     initializeLeafletIcons();
+    ring2.register(); // Register the ring2 component
   }, []);
 
   // State management
@@ -275,66 +277,79 @@ const EnergySharing = () => {
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Function to fetch data with retry logic
+  const fetchData = async (year, retryCount = 0, isRefresh = false) => {
+    try {
+      if (!isRefresh) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      setError(null);
+      
+      // Using Railway API instead of local API
+      const response = await railwayApi.get('/peertopeer/', {
+        params: {
+          year: year
+        }
+      });
+      
+      if (response.data.status === 'success') {
+        // Add coordinates to each location
+        const locationsWithCoordinates = response.data.predictions.map(location => ({
+          ...location,
+          coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
+        }));
+        
+        setLocations(locationsWithCoordinates);
+      } else {
+        setError(`Error: ${response.data.message || 'Unknown error'}`);
+        setLocations([]);
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      
+      // Retry logic - only retry for network/timeout errors up to 2 times
+      if ((err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') && retryCount < 2) {
+        console.log(`Retrying fetch attempt ${retryCount + 1}...`);
+        setTimeout(() => {
+          fetchData(year, retryCount + 1, isRefresh);
+        }, 2000); // Wait 2 seconds before retry
+        return;
+      }
+      
+      // Show user-friendly error message
+      if (err.code === 'ECONNABORTED') {
+        setError(`Request timed out. The server is taking too long to respond. Please try again later.`);
+      } else if (err.code === 'ERR_NETWORK') {
+        setError(`Network error. Unable to connect to the server. Please check your internet connection.`);
+      } else {
+        setError(`Error fetching data: ${err.message}`);
+      }
+      
+      setLocations([]);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   // Year change handler
   const handleYearChange = (year) => {
-    setSelectedYear(year);
+    if (year !== selectedYear) {
+      setSelectedYear(year);
+    }
   };
 
-  // Fetch data from Railway API based on selected year
+  // Fetch data when selectedYear changes
   useEffect(() => {
-    const fetchData = async (retryCount = 0) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Using Railway API instead of local API
-        const response = await railwayApi.get('/peertopeer/', {
-          params: {
-            year: selectedYear
-          }
-        });
-        
-        if (response.data.status === 'success') {
-          // Add coordinates to each location
-          const locationsWithCoordinates = response.data.predictions.map(location => ({
-            ...location,
-            coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
-          }));
-          
-          setLocations(locationsWithCoordinates);
-        } else {
-          setError(`Error: ${response.data.message || 'Unknown error'}`);
-          setLocations([]);
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        
-        // Retry logic - only retry for network/timeout errors up to 2 times
-        if ((err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') && retryCount < 2) {
-          console.log(`Retrying fetch attempt ${retryCount + 1}...`);
-          setTimeout(() => {
-            fetchData(retryCount + 1);
-          }, 2000); // Wait 2 seconds before retry
-          return;
-        }
-        
-        // Show user-friendly error message
-        if (err.code === 'ECONNABORTED') {
-          setError(`Request timed out. The server is taking too long to respond. Please try again later.`);
-        } else if (err.code === 'ERR_NETWORK') {
-          setError(`Network error. Unable to connect to the server. Please check your internet connection.`);
-        } else {
-          setError(`Error fetching data: ${err.message}`);
-        }
-        
-        setLocations([]);
-      } finally {
-        setIsLoading(false);
-      }
+    fetchData(selectedYear);
+    // Cleanup function to handle component unmounting or year changing
+    return () => {
+      // Cancel any pending requests if needed
     };
-
-    fetchData();
   }, [selectedYear]);
 
   // Calculate total predicted generation and consumption for each location
@@ -413,36 +428,9 @@ const EnergySharing = () => {
 
   // Handle refresh button
   const handleRefresh = () => {
-    setIsLoading(true);
-    // Fetch data with a slight delay to show loading state
-    setTimeout(() => {
-      const fetchDataOnRefresh = async () => {
-        try {
-          const response = await railwayApi.get('/peertopeer/', {
-            params: { year: selectedYear }
-          });
-          
-          if (response.data.status === 'success') {
-            const locationsWithCoordinates = response.data.predictions.map(location => ({
-              ...location,
-              coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
-            }));
-            
-            setLocations(locationsWithCoordinates);
-            setError(null);
-          } else {
-            setError(`Error: ${response.data.message || 'Unknown error'}`);
-          }
-        } catch (err) {
-          console.error('Error refreshing data:', err);
-          setError(`Failed to refresh data: ${err.message}`);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      
-      fetchDataOnRefresh();
-    }, 800);
+    if (!isRefreshing && !isLoading) {
+      fetchData(selectedYear, 0, true);
+    }
   };
 
   return (
@@ -462,10 +450,9 @@ const EnergySharing = () => {
                 height: '40px',
                 left: '10px',
                 '&:hover': { bgcolor: '#1b5e20' },
-                
               }}
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
             >
               <RefreshCw size={20} />
             </IconButton>
@@ -476,9 +463,9 @@ const EnergySharing = () => {
               <SingleYearPicker
                 initialYear={selectedYear}
                 onYearChange={handleYearChange}
+                disabled={isLoading || isRefreshing}
               />
             </Box>
-          
           </Box>
         </Box>
         
@@ -508,6 +495,7 @@ const EnergySharing = () => {
                   color: 'white',
                   '&:hover': { bgcolor: 'error.main' }
                 }}
+                disabled={isLoading || isRefreshing}
               >
                 <RefreshCw size={16} />
               </IconButton>
@@ -545,9 +533,17 @@ const EnergySharing = () => {
                   </Tooltip>
                 </Box>
                 
-                {isLoading ? (
-                  <Box sx={{ textAlign: 'center', py: 8 }}>
-                    <Typography>Loading data...</Typography>
+                {(isLoading || isRefreshing) ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8 }}>
+                    <l-ring-2
+                      size="50"
+                      stroke="5"
+                      stroke-length="0.25"
+                      bg-opacity="0.1"
+                      speed="0.8" 
+                      color="#16A34A"
+                    ></l-ring-2>
+                    <Typography sx={{ mt: 2, color: 'text.secondary' }}>Loading data...</Typography>
                   </Box>
                 ) : locationsWithTotals.length === 0 && !error ? (
                   <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -607,12 +603,33 @@ const EnergySharing = () => {
                 </Typography>
               </Box>
               
-              <MapView 
-                locationsWithTotals={locationsWithTotals}
-                hoveredCity={hoveredCity}
-                onMarkerHover={setHoveredCity}
-                isLoading={isLoading}
-              />
+              {(isLoading || isRefreshing) ? (
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '100%',
+                  bgcolor: 'rgba(255,255,255,0.9)'
+                }}>
+                  <l-ring-2
+                    size="50"
+                    stroke="5"
+                    stroke-length="0.25"
+                    bg-opacity="0.1"
+                    speed="0.8" 
+                    color="#16A34A"
+                  ></l-ring-2>
+                  <Typography sx={{ mt: 2, color: 'text.secondary' }}>Loading map data...</Typography>
+                </Box>
+              ) : (
+                <MapView 
+                  locationsWithTotals={locationsWithTotals}
+                  hoveredCity={hoveredCity}
+                  onMarkerHover={setHoveredCity}
+                  isLoading={isLoading || isRefreshing}
+                />
+              )}
             </Paper>
           </Grid>
         </Grid>

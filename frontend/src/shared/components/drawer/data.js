@@ -10,7 +10,7 @@ export const USER_NAVIGATION = [
     kind: 'item',
     segment: 'dashboard',
     title: 'Dashboard',
-    icon: <AppIcon name="energyshare" />,
+    icon: <AppIcon name="dashboard" />,
     path: '/dashboard',
   },
   {

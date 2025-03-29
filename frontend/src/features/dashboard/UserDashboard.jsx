@@ -15,7 +15,7 @@ import RenewableEnergyNews from './Articles';
 import { RefreshCw } from 'lucide-react';
 // Import only the railwayApi service
 import { railwayApi } from '@modules/api'; // Update the path to match your project structure
-
+import { ring2 } from 'ldrs';
 // Define energy types and their corresponding icons
 const energyTypes = [
   { type: 'solar', icon: Sun, color: '#FFB800', name: 'Solar', endpoint: '/predictions/solar/' },
@@ -60,6 +60,10 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEnergyData();
   }, [selectedYear]);
+
+  useEffect(() => {
+    ring2.register();
+  }, []);
 
   // Fetch actual energy data from API endpoints
   const fetchEnergyData = async () => {
@@ -250,13 +254,18 @@ const Dashboard = () => {
     fetchEnergyData();
   };
 
-  if (loading) {
+ if (loading) {
     return (
-      <div className="p-3 md:p-6">
-        <div className="text-center py-8 md:py-10">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 md:h-12 md:w-12 border-t-2 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-sm md:text-base text-gray-700">Loading dashboard data...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[40vh]">
+        <l-ring-2
+          size="50"
+          stroke="5"
+          stroke-length="0.25"
+          bg-opacity="0.1"
+          speed="0.8" 
+          color="#16A34A"
+        ></l-ring-2>
+        <p className="mt-4 text-gray-700 font-medium">Loading dashboard data...</p>
       </div>
     );
   }
@@ -480,7 +489,7 @@ const Dashboard = () => {
           return (
             <div key={type} className="rounded-lg p-4 md:p-6 bg-white shadow-md relative" style={borderStyle}>
               <div className="absolute top-3 md:top-4 right-3 md:right-4">
-                <Link to={`/${type}`}>
+                <Link to={`/modules/${type}`}>
                   <button 
                     className="w-6 h-6 md:w-8 md:h-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
                   >

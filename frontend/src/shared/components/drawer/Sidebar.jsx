@@ -195,12 +195,13 @@ const Sidebar = () => {
       <Logo open={isMobile ? true : open} onToggle={isMobile ? handleMobileDrawerToggle : handleDrawer} />
       
       <List sx={scrollableListStyles}>
-        <NavigationItems 
-          navigationData={navigationData}
-          open={isMobile ? true : open}
-          openSubMenu={openSubMenu}
-          handleSubMenu={handleSubMenu}
-        />
+      <NavigationItems 
+  navigationData={navigationData}
+  open={isMobile ? true : open}
+  openSubMenu={openSubMenu}
+  handleSubMenu={handleSubMenu}
+  currentPath={location.pathname} // Add this line
+/>
       </List>
       
     

@@ -38,10 +38,15 @@ import {
     Trash,
     Send,
     Mails,
+    Gauge,
+    Zap,
+    HandCoins,
+    Download
 
   
 } from 'lucide-react';
 import { useTheme } from "@emotion/react";
+import { Savings } from "@mui/icons-material";
 
 export const IconLibrary = {
     // Sidebar Icons
@@ -50,7 +55,6 @@ export const IconLibrary = {
     geothermal: Earth,
     hydropower: Dam,
     biomass: Recycle,
-    dashboard: LayoutDashboard,
     modules: Component,
     energyshare: PlugZap,
     help: HeartHandshake,
@@ -79,7 +83,11 @@ export const IconLibrary = {
     edit: Pencil,
     trash: Trash,
     send: Send,
-    mails: Mails
+    mails: Mails,
+    dashboard: Gauge,
+    energy: Zap,
+    savings: HandCoins,
+    download: Download
 };
 
 export const IconTools = {

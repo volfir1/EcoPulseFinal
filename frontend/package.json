@@ -26,6 +26,7 @@
     "formik": "^2.4.6",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
+    "ldrs": "^1.1.6",
     "leaflet": "^1.9.4",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.473.0",
@@ -46,7 +47,7 @@
   },
   "scripts": {
     "start": "vite",
-     "build": "cross-env CI=false vite build",
+    "build": "cross-env CI=false vite build",
     "preview": "vite preview",
     "test": "vitest"
   },
