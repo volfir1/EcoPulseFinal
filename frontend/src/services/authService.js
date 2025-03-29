@@ -13,7 +13,7 @@ const authService = {
   register: async (userData) => {
     try {
       console.log('Sending registration data:', userData);
-      console.log('Sending to URL:', nodeApi.defaults.baseURL + 'auth/register');
+      console.log('Sending to URL:', nodeApi.defaults.baseURL + '/auth/register');
       const response = await nodeApi.post('/auth/register', userData);
 
       // Return data needed for verification
