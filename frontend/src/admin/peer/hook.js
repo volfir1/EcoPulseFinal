@@ -20,7 +20,7 @@ export const usePeerToPeer = () => {
     try {
       console.log('Fetching data from Railway API');
       
-      const response = await railwayApi.get('/api/peertopeer/records');
+      const response = await railwayApi.get('/peertopeer/records');
       console.log('MongoDB data response:', response.data);
       
       if (response.data.status === 'success') {

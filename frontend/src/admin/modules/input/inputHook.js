@@ -1,6 +1,6 @@
 // useSolarAdmin.js
 import { useState, useCallback, useMemo } from 'react';
-import api from '@features/modules/api';
+import { railwayApi } from '@features/modules/api';
 import { useSnackbar } from 'notistack';
 
 export const useSolarAdmin = () => {
@@ -96,7 +96,7 @@ export const useSolarAdmin = () => {
     setLoading(true);
     try {
       // Add new record - this is the important API endpoint for saving data
-      await api.post('/api/create/', payload);
+      await railwayApi.post('/create/', payload);
       enqueueSnackbar('Energy data added successfully', { variant: 'success' });
       
       // Reset form after successful submission

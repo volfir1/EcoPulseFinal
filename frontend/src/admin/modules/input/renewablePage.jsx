@@ -23,7 +23,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-import api from '@features/modules/api';
+import { railwayApi } from '@features/modules/api';
 
 // Energy types configuration
 const energyTypes = [
@@ -61,7 +61,7 @@ const RenewableEnergyPage = () => {
       // Get data for the selected energy type
       const endpoint = selectedEnergyType === 'all' ? 'solar' : selectedEnergyType;
       
-      const response = await api.get(`/api/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
+      const response = await railwayApi.get(`/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
       
       // Clean and parse the response
       const dataString = typeof response.data === 'string' 
@@ -126,7 +126,7 @@ const RenewableEnergyPage = () => {
       // Fetch each energy type in parallel
       const promises = endpoints.map(async (endpoint) => {
         try {
-          const response = await api.get(`/api/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
+          const response = await railwayApi.get(`/predictions/${endpoint}/?start_year=${startYear}&end_year=${endYear}`);
           
           const dataString = typeof response.data === 'string' 
             ? response.data 
