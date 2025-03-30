@@ -212,7 +212,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         'Geothermal (GWh)': value
       };
       
-      await api.post('/api/predictions/biomass/', payload);
+      await railwayApi.post('/predictions/biomass/', payload);
       
       try {
         enqueueSnackbar('Geothermal generation data added successfully', { variant: 'success' });
@@ -237,7 +237,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const updateRecord = useCallback(async (year, payload) => {
     setLoading(true);
     try {
-      await api.put(`/api/update/${year}/`, payload);
+      await railwayApi.put(`/update/${year}/`, payload);
       
       try {
         enqueueSnackbar('Geothermal generation data updated successfully', { variant: 'success' });
@@ -262,7 +262,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const deleteRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.put(`/api/update/${year}/`, { isDeleted: true });
+      await railwayApi.put(`/update/${year}/`, { isDeleted: true });
       
       try {
         enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });
@@ -287,7 +287,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   const recoverRecord = useCallback(async (year) => {
     setLoading(true);
     try {
-      await api.put(`/api/recover/${year}/`, { isDeleted: false });
+      await railwayApi.put(`/recover/${year}/`, { isDeleted: false });
       
       try {
         enqueueSnackbar('Geothermal generation data recovered successfully', { variant: 'success' });

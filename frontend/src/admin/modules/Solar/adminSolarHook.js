@@ -1,4 +1,4 @@
-// adminGeoHook.js
+//adminSolarHook.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { railwayApi } from '@features/modules/api';
 import { useSnackbar } from '@shared/index';
@@ -6,11 +6,28 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
-export const useGeothermalAnalytics = () => {
+export const useSolarAnalytics = () => {
   // Properly extract the snackbar function
-  const snackbar = useSnackbar();
-  const enqueueSnackbar = snackbar?.enqueueSnackbar || 
-                         (message => console.log('Snackbar message:', message));
+  const toast = useSnackbar();
+  
+  // Create a wrapper function to handle different toast types
+ const enqueueSnackbar = useCallback((message, options = {}) => {
+  const variant = options?.variant || 'info';
+  
+  try {
+    if (variant === 'success') {
+      toast.success(message);
+    } else if (variant === 'error') {
+      toast.error(message);
+    } else if (variant === 'warning') {
+      toast.warning(message);
+    } else {
+      toast.info(message);
+    }
+  } catch (error) {
+    console.log(`Toast message (${variant}):`, message);
+  }
+}, [toast]);
   
   const [generationData, setGenerationData] = useState([]);
   const [currentProjection, setCurrentProjection] = useState(null);
@@ -26,58 +43,63 @@ export const useGeothermalAnalytics = () => {
     return response.replace(/NaN/g, 'null');
   };
 
-
   // Fetch data based on selected year range
-// Fetch data based on selected year range
-const fetchData = useCallback(async (startYear, endYear) => {
-  setLoading(true);
-  try {
-    const response = await railwayApi.get(`/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
-    
-    // Clean the response by replacing "NaN" with "null"
-    // First convert response.data to a string if it's not already one
-    const dataString = typeof response.data === 'string' 
-      ? response.data 
-      : JSON.stringify(response.data);
-    
-    // Now clean the string
-    const cleanedResponse = cleanResponse(dataString);
+  const fetchData = useCallback(async (startYear, endYear) => {
+    setLoading(true);
+    try {
+      const response = await railwayApi.get(`/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
+      
+      // Clean the response by replacing "NaN" with "null"
+      // First convert response.data to a string if it's not already one
+      const dataString = typeof response.data === 'string' 
+        ? response.data 
+        : JSON.stringify(response.data);
+      
+      // Now clean the string
+      const cleanedResponse = cleanResponse(dataString);
 
-    // Parse the cleaned JSON string
-    const responseData = JSON.parse(cleanedResponse);
+      // Parse the cleaned JSON string
+      const responseData = JSON.parse(cleanedResponse);
 
-    // Check if the response contains the expected data
-    if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
-      const formattedData = responseData.predictions.map(item => ({
-        date: item.Year,
-        value: parseFloat(item['Predicted Production']),
-        nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
-        population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
-        gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
-        isPredicted: item.isPredicted !== undefined ? item.isPredicted : false, // Ensure isPredicted is included
-        isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
-      }));
+      // Check if the response contains the expected data
+      if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
+        const formattedData = responseData.predictions.map(item => ({
+          date: item.Year,
+          value: parseFloat(item['Predicted Production']),
+          nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
+          population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
+          gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
+          isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
+          isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
+        }));
 
-      // Log the raw fetched data and the formatted data to verify the isPredicted column
-      console.log("Raw fetched data:", responseData.predictions);
-      console.log("Formatted data:", formattedData);
+        // Calculate current projection
+        const latestYear = Math.max(...formattedData.map(item => item.date));
+        const latestPrediction = formattedData.find(item => item.date === latestYear);
+        if (latestPrediction) {
+          setCurrentProjection(latestPrediction.value);
+        }
 
-      setGenerationData(formattedData);
-    } else {
-      throw new Error("Invalid data format in API response");
+        // Log the raw fetched data and the formatted data to verify the isPredicted column
+        console.log("Raw fetched data:", responseData.predictions);
+        console.log("Formatted data:", formattedData);
+
+        setGenerationData(formattedData);
+      } else {
+        throw new Error("Invalid data format in API response");
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      enqueueSnackbar('Failed to fetch data. Please try again.', { variant: 'error' });
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    enqueueSnackbar('Failed to fetch data. Please try again.', { variant: 'error' });
-  } finally {
-    setLoading(false);
-  }
-}, [enqueueSnackbar]);
+  }, [enqueueSnackbar]);
 
   // Fetch data on component mount and when year range or refresh trigger changes
   useEffect(() => {
     fetchData(selectedStartYear, selectedEndYear);
-  }, [selectedStartYear, selectedEndYear, refreshTrigger]); // fetchData removed
+  }, [selectedStartYear, selectedEndYear, refreshTrigger, fetchData]); 
 
   // Year range handlers
   const handleStartYearChange = useCallback((year) => {
@@ -96,11 +118,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
   // Download data as PDF with chart and table
   const handleDownload = useCallback(async () => {
     try {
-      try {
-        enqueueSnackbar('Preparing your download...', { variant: 'info' });
-      } catch (error) {
-        console.log('Preparing download...');
-      }
+      enqueueSnackbar('Preparing your download...', { variant: 'info' });
       
       // Create new PDF
       const doc = new jsPDF({
@@ -111,7 +129,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add title and metadata
       doc.setFontSize(16);
-      doc.text('Geothermal Power Generation Summary', 15, 15);
+      doc.text('Solar Power Generation Summary', 15, 15);
       
       doc.setFontSize(11);
       doc.text(`Year Range: ${selectedStartYear} - ${selectedEndYear}`, 15, 25);
@@ -143,7 +161,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
           
           // Add chart title
           doc.setFontSize(12);
-          doc.text('Geothermal Generation Chart', 15, 45);
+          doc.text('Solar Generation Chart', 15, 45);
         } catch (chartError) {
           console.error('Error capturing chart:', chartError);
           // Continue without chart if it fails
@@ -155,7 +173,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add table header
       doc.setFontSize(12);
-      doc.text('Geothermal Generation Data Table', 15, tableY - 5);
+      doc.text('Solar Generation Data Table', 15, tableY - 5);
       
       // Create table data
       doc.autoTable({
@@ -163,7 +181,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
         body: generationData.map(item => [item.date, item.value.toFixed(2)]),
         startY: tableY,
         margin: { left: 15, right: 15 },
-        headStyles: { fillColor: [255, 107, 107] }, // Red color for geothermal
+        headStyles: { fillColor: [255, 165, 0] }, // Orange color for solar
         styles: {
           fontSize: 10,
           cellPadding: 3
@@ -171,139 +189,187 @@ const fetchData = useCallback(async (startYear, endYear) => {
       });
       
       // Save PDF
-      doc.save('Geothermal_Power_Generation_Summary.pdf');
+      doc.save('Solar_Power_Generation_Summary.pdf');
       
-      try {
-        enqueueSnackbar('Summary downloaded successfully!', { variant: 'success' });
-      } catch (error) {
-        console.log('Summary downloaded successfully!');
-      }
+      enqueueSnackbar('Summary downloaded successfully!', { variant: 'success' });
     } catch (error) {
       console.error('Download error:', error);
-      
-      try {
-        enqueueSnackbar('Failed to download summary. Please try again.', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Error showing notification:', snackbarError);
-        alert('Failed to download summary. Please try again.');
-      }
+      enqueueSnackbar('Failed to download summary. Please try again.', { variant: 'error' });
     }
   }, [generationData, selectedStartYear, selectedEndYear, currentProjection, enqueueSnackbar, chartRef]);
 
-  // Additional data for potential future use
-  const temperatureData = Array.from({ length: 7 }, (_, i) => ({
+  // Additional data for potential future use (solar-specific data)
+  const sunlightData = Array.from({ length: 7 }, (_, i) => ({
     day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-    surface: 150 + Math.sin(i * 0.5) * 10 + Math.random() * 5,
-    deep: 280 + Math.sin(i * 0.3) * 5 + Math.random() * 3
+    direct: 850 + Math.sin(i * 0.5) * 100 + Math.random() * 50,
+    diffuse: 200 + Math.sin(i * 0.3) * 30 + Math.random() * 20
   }));
 
-  const wellPerformance = Array.from({ length: 6 }, (_, i) => ({
-    well: `Well ${i + 1}`,
-    pressure: 85 + Math.sin(i * 0.7) * 10 + Math.random() * 5,
-    output: 2600 + Math.sin(i * 0.6) * 300 + Math.random() * 200
+  const panelPerformance = Array.from({ length: 6 }, (_, i) => ({
+    panel: `Panel ${i + 1}`,
+    efficiency: 22 + Math.sin(i * 0.7) * 2 + Math.random() * 1,
+    output: 300 + Math.sin(i * 0.6) * 30 + Math.random() * 20
   }));
 
-  // Create, update, and delete methods for data management
+  // FIXED: Create, update, and delete methods for data management
   const addRecord = useCallback(async (year, value) => {
+    if (!year || !value) {
+      enqueueSnackbar('Year and value are required', { variant: 'error' });
+      return;
+    }
+    
     setLoading(true);
     try {
+      // Ensure we're sending a proper payload with the correct field names
       const payload = {
-        Year: year,
-        'Geothermal (GWh)': value
+        Year: parseInt(year, 10),
+        'Solar (GWh)': parseFloat(value)
       };
       
-      await api.post('/api/predictions/solar/', payload);
+      // Log the payload for debugging
+      console.log('Adding solar record with payload:', payload);
       
-      try {
-        enqueueSnackbar('Geothermal generation data added successfully', { variant: 'success' });
-      } catch (error) {
-        console.log('Geothermal generation data added successfully');
-      }
+      // Make the API call
+      const response = await railwayApi.post('/predictions/solar/', payload);
       
-      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+      // Check response
+      console.log('API response for add record:', response);
+      
+      // Show success message
+      enqueueSnackbar('Solar generation data added successfully', { variant: 'success' });
+      
+      // Refresh the data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error adding data:', error);
-      
-      try {
-        enqueueSnackbar('Failed to add geothermal generation data', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Error showing notification:', snackbarError);
-      }
+      const errorMessage = error.response?.data?.message || 'Failed to add solar generation data';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }
   }, [enqueueSnackbar]);
 
   const updateRecord = useCallback(async (year, payload) => {
+    if (!year) {
+      enqueueSnackbar('Year is required', { variant: 'error' });
+      return;
+    }
+    
     setLoading(true);
     try {
-      await api.put(`/api/update/${year}/`, payload);
+      // Ensure we're sending a proper payload with the correct field names
+      const formattedPayload = {
+        ...payload,
+        Year: parseInt(year, 10)
+      };
       
-      try {
-        enqueueSnackbar('Geothermal generation data updated successfully', { variant: 'success' });
-      } catch (error) {
-        console.log('Geothermal generation data updated successfully');
+      // If payload doesn't include 'Solar (GWh)', try to get it from generation data
+      if (!formattedPayload['Solar (GWh)']) {
+        const existingRecord = generationData.find(item => item.date === parseInt(year, 10));
+        if (existingRecord) {
+          formattedPayload['Solar (GWh)'] = existingRecord.value;
+        }
       }
       
-      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+      // Log the payload for debugging
+      console.log('Updating solar record with payload:', formattedPayload);
+      
+      // Make the API call
+      const response = await railwayApi.put(`/update/${year}/`, formattedPayload);
+      
+      // Check response
+      console.log('API response for update record:', response);
+      
+      // Show success message
+      enqueueSnackbar('Solar generation data updated successfully', { variant: 'success' });
+      
+      // Refresh the data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error updating data:', error);
-      
-      try {
-        enqueueSnackbar('Failed to update geothermal generation data', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Error showing notification:', snackbarError);
-      }
+      const errorMessage = error.response?.data?.message || 'Failed to update solar generation data';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [enqueueSnackbar]);
+  }, [generationData, enqueueSnackbar]);
 
   const deleteRecord = useCallback(async (year) => {
+    if (!year) {
+      enqueueSnackbar('Year is required', { variant: 'error' });
+      return;
+    }
+    
     setLoading(true);
     try {
-      await api.put(`/api/update/${year}/`, { isDeleted: true });
-      
-      try {
-        enqueueSnackbar('Geothermal generation data deleted successfully', { variant: 'success' });
-      } catch (error) {
-        console.log('Geothermal generation data deleted successfully');
+      // First confirm with the user
+      const confirmDelete = window.confirm(`Are you sure you want to delete solar generation data for year ${year}?`);
+      if (!confirmDelete) {
+        setLoading(false);
+        return;
       }
       
-      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+      // Ensure we're sending a proper payload
+      const payload = { 
+        isDeleted: true,
+        Year: parseInt(year, 10)
+      };
+      
+      // Log the payload for debugging
+      console.log('Deleting solar record with payload:', payload);
+      
+      // Make the API call
+      const response = await railwayApi.put(`/update/${year}/`, payload);
+      
+      // Check response
+      console.log('API response for delete record:', response);
+      
+      // Show success message
+      enqueueSnackbar('Solar generation data deleted successfully', { variant: 'success' });
+      
+      // Refresh the data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error deleting data:', error);
-      
-      try {
-        enqueueSnackbar('Failed to delete geothermal generation data', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Error showing notification:', snackbarError);
-      }
+      const errorMessage = error.response?.data?.message || 'Failed to delete solar generation data';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }
   }, [enqueueSnackbar]);
 
   const recoverRecord = useCallback(async (year) => {
+    if (!year) {
+      enqueueSnackbar('Year is required', { variant: 'error' });
+      return;
+    }
+    
     setLoading(true);
     try {
-      await api.put(`/api/recover/${year}/`, { isDeleted: false });
+      // Ensure we're sending a proper payload
+      const payload = { 
+        isDeleted: false,
+        Year: parseInt(year, 10)
+      };
       
-      try {
-        enqueueSnackbar('Geothermal generation data recovered successfully', { variant: 'success' });
-      } catch (error) {
-        console.log('Geothermal generation data deleted successfully');
-      }
+      // Log the payload for debugging
+      console.log('Recovering solar record with payload:', payload);
       
-      setRefreshTrigger(prev => prev + 1); // Trigger refetch
+      // Make the API call - ensure we're using the correct endpoint
+      const response = await railwayApi.put(`/recover/${year}/`, payload);
+      
+      // Check response
+      console.log('API response for recover record:', response);
+      
+      // Show success message
+      enqueueSnackbar('Solar generation data recovered successfully', { variant: 'success' });
+      
+      // Refresh the data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error recovering data:', error);
-      
-      try {
-        enqueueSnackbar('Failed to recover geothermal generation data', { variant: 'error' });
-      } catch (snackbarError) {
-        console.error('Error showing notification:', snackbarError);
-      }
+      const errorMessage = error.response?.data?.message || 'Failed to recover solar generation data';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -323,10 +389,10 @@ const fetchData = useCallback(async (startYear, endYear) => {
     updateRecord,
     deleteRecord,
     recoverRecord,
-    temperatureData,
-    wellPerformance,
-    chartRef // Export the chart ref
+    sunlightData,
+    panelPerformance,
+    chartRef
   };
 };
 
-export default useGeothermalAnalytics;
+export default useSolarAnalytics;

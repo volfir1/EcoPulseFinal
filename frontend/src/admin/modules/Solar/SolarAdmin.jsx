@@ -1,4 +1,4 @@
-// GeothermalAdmin.jsx
+// SolarAdmin.jsx
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   Dialog,
@@ -22,10 +22,10 @@ import {
   useDataTable
 } from '@shared/index';
 
-import useGeothermalAnalytics from './adminSolarHook';
+import useSolarAnalytics from './adminSolarHook';
 import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs, recoverData } from './adminSolarUtil';
 
-const GeothermalAdmin = () => {
+const SolarAdmin = () => {
   // Define all handlers at the top of component - BEFORE any useMemo calls
   
   // Custom hooks
@@ -46,7 +46,7 @@ const GeothermalAdmin = () => {
     temperatureData,
     wellPerformance,
     chartRef
-  } = useGeothermalAnalytics();
+  } = useSolarAnalytics();
 
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -544,4 +544,4 @@ const GeothermalAdmin = () => {
   );
 };
 
-export default GeothermalAdmin;
+export default SolarAdmin;

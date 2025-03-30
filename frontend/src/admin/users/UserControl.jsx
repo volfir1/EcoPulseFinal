@@ -7,55 +7,40 @@ import {
   Tab,
   Snackbar,
   Alert, 
-  CircularProgress
+  CircularProgress,
+  Container // Import Container for potentially better max-width control
 } from '@mui/material';
-import { UserDashboard } from './UserDashboard';
-import { UsersList } from './UserList';
-import { useUserManagement } from './userManageHook';
-import { Loader, useLoader } from '@shared/index';
+// Assuming UserDashboard and UsersList are correctly imported from their relative paths
+import { UserDashboard } from './UserDashboard'; 
+import { UsersList } from './UserList'; 
+import { useUserManagement } from './userManageHook'; 
+// Assuming Loader components are correctly imported
+import { Loader, useLoader } from '@shared/index'; 
 
 // Main User Management Component
 export default function UserControl() {
   const [tabIndex, setTabIndex] = useState(0);
-  
-  // Store the entire loader hook result
-  const loader = useLoader();
-  
+  const loader = useLoader(); // Using custom loader hook
   const { 
-    data, 
-    loading, 
-    selectedUser, 
-    setSelectedUser, 
-    handleSendRecoveryLink,
-    handleSendPasswordResetLink,
-    updateUserRole,
-    handleDeactivateUser,
-    refreshData
+    data, loading, selectedUser, setSelectedUser, 
+    handleSendRecoveryLink, handleSendPasswordResetLink,
+    updateUserRole, handleDeactivateUser, refreshData
   } = useUserManagement();
   
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Update loading state for the loader when our loading state changes
+  // Effect to manage loading state via loader hook
   useEffect(() => {
+    // Ensure loader and setLoading are available before calling
     if (loader && typeof loader.setLoading === 'function') {
       loader.setLoading(loading);
     }
   }, [loading, loader]);
   
-  // Add useEffect to log data status for debugging
+  // Debugging effect (keep if useful during development)
   useEffect(() => {
-    console.log('UserControl data:', data);
-    console.log('UsersList available:', data?.usersList?.length || 0);
-    console.log('DeletedUsers available:', data?.deletedUsers?.length || 0);
-    
-    // Debug inactive users
-    if (data?.statistics) {
-      console.log('Inactive users count:', data.statistics.inactiveUsers);
-    }
+    console.log('UserControl data status:', data ? 'Loaded' : 'Not loaded');
+    // Add more specific logs if needed
   }, [data]);
 
   const handleTabChange = (event, newValue) => {
@@ -63,272 +48,190 @@ export default function UserControl() {
   };
 
   const handleEditUser = (user) => {
-    console.log('Edit user:', user);
+    console.log('Edit user:', user); // Keep for debugging or future implementation
     setSelectedUser(user);
   };
 
-  const handleUserDeactivation = async (userId) => {
-    // Use loader if available, otherwise handle loading state manually
-    if (loader && typeof loader.setLoading === 'function') {
-      loader.setLoading(true);
-    }
-    
-    try {
-      const result = await handleDeactivateUser(userId);
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'User has been successfully deactivated',
-          severity: 'success'
-        });
-        
-        // Refresh data after deactivation to get updated counts
-        refreshData();
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.error?.message || 'Failed to deactivate user',
-          severity: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error in deactivating user:', error);
-      setSnackbar({
-        open: true,
-        message: 'An error occurred while deactivating the user',
-        severity: 'error'
-      });
-    } finally {
-      if (loader && typeof loader.setLoading === 'function') {
-        loader.setLoading(false);
-      }
-    }
+  // --- Action Handlers (with loading state managed by loader hook if possible) ---
+
+  const executeAction = async (actionFn, args, successMessage, errorMessagePrefix) => {
+     if (loader && typeof loader.setLoading === 'function') loader.setLoading(true);
+     try {
+         const result = await actionFn(...args);
+         if (result.success) {
+             setSnackbar({ open: true, message: successMessage, severity: 'success' });
+             // Refresh data on successful actions that modify user state
+             if (actionFn === handleDeactivateUser || actionFn === handleSendRecoveryLink || actionFn === updateUserRole) {
+                await refreshData(); // Refresh data after action
+             }
+         } else {
+             setSnackbar({ open: true, message: result.error?.message || `${errorMessagePrefix}: Unknown error`, severity: 'error' });
+         }
+         return result; // Return result for potential further checks
+     } catch (error) {
+         console.error(`Error during ${errorMessagePrefix}:`, error);
+         setSnackbar({ open: true, message: `An error occurred during ${errorMessagePrefix}`, severity: 'error' });
+         return { success: false, error: error }; // Return standard error format
+     } finally {
+         if (loader && typeof loader.setLoading === 'function') loader.setLoading(false);
+     }
   };
 
-  const handleSendRecovery = async (email) => {
-    if (loader && typeof loader.setLoading === 'function') {
-      loader.setLoading(true);
-    }
-    
-    try {
-      const result = await handleSendRecoveryLink(email);
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Reactivation link has been sent to the user',
-          severity: 'success'
-        });
-        
-        // Refresh data after sending recovery link
-        refreshData();
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.error?.message || 'Failed to send reactivation link',
-          severity: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error in sending recovery link:', error);
-      setSnackbar({
-        open: true,
-        message: 'An error occurred while sending reactivation link',
-        severity: 'error'
-      });
-    } finally {
-      if (loader && typeof loader.setLoading === 'function') {
-        loader.setLoading(false);
-      }
-    }
+  const handleUserDeactivation = (userId) => {
+     executeAction(handleDeactivateUser, [userId], 'User successfully deactivated', 'deactivation');
   };
 
-  const handleSendPasswordReset = async (email) => {
-    if (loader && typeof loader.setLoading === 'function') {
-      loader.setLoading(true);
-    }
-    
-    try {
-      const result = await handleSendPasswordResetLink(email);
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Password reset link has been sent to the user',
-          severity: 'success'
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.error?.message || 'Failed to send password reset link',
-          severity: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error in sending password reset:', error);
-      setSnackbar({
-        open: true,
-        message: 'An error occurred while sending password reset link',
-        severity: 'error'
-      });
-    } finally {
-      if (loader && typeof loader.setLoading === 'function') {
-        loader.setLoading(false);
-      }
-    }
+  const handleSendRecovery = (email) => {
+     executeAction(handleSendRecoveryLink, [email], 'Reactivation link sent', 'sending recovery link');
+  };
+  
+  const handleSendPasswordReset = (email) => {
+     executeAction(handleSendPasswordResetLink, [email], 'Password reset link sent', 'sending password reset');
   };
 
-  const handleRoleUpdate = async (userId, newRole) => {
-    if (loader && typeof loader.setLoading === 'function') {
-      loader.setLoading(true);
-    }
-    
-    try {
-      const result = await updateUserRole(userId, newRole);
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: `User role has been updated to ${newRole}`,
-          severity: 'success'
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.error?.message || 'Failed to update user role',
-          severity: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Error in updating user role:', error);
-      setSnackbar({
-        open: true,
-        message: 'An error occurred while updating user role',
-        severity: 'error'
-      });
-    } finally {
-      if (loader && typeof loader.setLoading === 'function') {
-        loader.setLoading(false);
-      }
-    }
+  const handleRoleUpdate = (userId, newRole) => {
+     executeAction(updateUserRole, [userId, newRole], `User role updated to ${newRole}`, 'updating role');
   };
-
+  
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Make sure we're checking data existence properly
-  const isDataEmpty = !data || !data.usersList || data.usersList.length === 0;
+  // Check if data is still loading AND empty (initial load state)
+  const isInitialLoading = loading && (!data || (!data.usersList?.length && !data.deletedUsers?.length));
 
-  // Use Loader component if available, otherwise fall back to CircularProgress
-  if (loading && isDataEmpty) {
-    return (
-      loader && typeof loader.Loader === 'function' ? (
-        <Loader fullPage message="Loading user data..." />
-      ) : (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-          <CircularProgress />
-        </Box>
-      )
+  // Fallback Loading UI
+  if (isInitialLoading) {
+    // Prefer custom Loader if available
+    return loader?.Loader ? (
+      <Loader fullPage message="Loading user management..." />
+    ) : (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 200px)', p: 3 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading user data...</Typography>
+      </Box>
     );
   }
 
-  // Ensure the data structure includes default empty arrays if data is missing
+  // Ensure data has default empty arrays/objects for safety downstream
   const safeData = {
-    ...data,
+    statistics: {
+        totalUsers: '0', activeUsers: '0', newUsers: '0', verifiedUsers: '0', deletedUsers: '0', inactiveUsers: '0',
+        ...(data?.statistics || {}) // Spread actual stats over defaults
+    },
     usersList: data?.usersList || [],
     deletedUsers: data?.deletedUsers || [],
-    statistics: {
-      ...(data?.statistics || {}),
-      totalUsers: data?.statistics?.totalUsers || '0',
-      activeUsers: data?.statistics?.activeUsers || '0',
-      newUsers: data?.statistics?.newUsers || '0',
-      verifiedUsers: data?.statistics?.verifiedUsers || '0',
-      deletedUsers: data?.statistics?.deletedUsers || '0',
-      // Use the inactiveUsers count from statistics if available
-      inactiveUsers: data?.statistics?.inactiveUsers || 
-                    // Fall back to calculated value if not present
-                    (parseInt(data?.statistics?.totalUsers || 0) - 
-                     parseInt(data?.statistics?.activeUsers || 0)).toString()
-    },
     activityData: data?.activityData || []
   };
+   // Recalculate inactive users robustly after potentially spreading defaults
+   safeData.statistics.inactiveUsers = (
+       parseInt(safeData.statistics.totalUsers.replace(/,/g, '') || '0') - 
+       parseInt(safeData.statistics.activeUsers.replace(/,/g, '') || '0')
+   ).toString();
+
 
   return (
-    <Box sx={{ p: 2, maxWidth: '100%', top: 100 }}>
-      <Typography variant="h5" component="h1" fontWeight="medium" sx={{ mb: 2 }}>
+    // Use Container for centered content with max-width, or Box for full width
+    // Container might be better for typical app layouts
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 } }}> 
+    {/* Removed 'top: 100'. Use responsive padding (py). */}
+    {/* Or use Box sx={{ p: { xs: 1, sm: 2, md: 3 } }} if full width needed */}
+      
+      <Typography 
+        variant="h5" 
+        component="h1" 
+        fontWeight="medium" 
+        // Responsive font size and margin bottom
+        sx={{ 
+          mb: { xs: 2, md: 3 },
+          fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' } 
+        }}
+      >
         User Management
       </Typography>
       
-      {/* Display data status for debugging */}
-      {isDataEmpty && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          No user data available. This could be a data fetching issue or empty database.
+      {/* Optional: Show alert if data loading finished but is empty */}
+      {!isInitialLoading && !safeData.usersList?.length && !safeData.deletedUsers?.length && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          No users found in the system.
         </Alert>
       )}
       
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      {/* --- Tabs --- */}
+      <Box sx={{ 
+         borderBottom: 1, borderColor: 'divider', 
+         mb: { xs: 2, md: 3 }, // Responsive margin below tabs
+         width: '100%', // Ensure Box takes full width for Tabs
+      }}>
         <Tabs 
           value={tabIndex} 
           onChange={handleTabChange}
-          TabIndicatorProps={{
-            style: {
-              height: '3px',
-              backgroundColor: '#1b5e20'
-            },
-          }}
+          // Centered looks good on wider screens with few tabs
+          centered 
+          // variant="scrollable" // Good practice, handles overflow
+          // allowScrollButtonsMobile // Ensure buttons appear on mobile if needed
+          TabIndicatorProps={{ style: { height: '3px', backgroundColor: '#1b5e20' }, }}
+          sx={{ 
+            // Allow tabs to shrink if needed on very small screens
+             '& .MuiTab-root': { minWidth: { xs: 80, sm: 120 } } // Adjust minWidth as needed
+          }} 
         >
           <Tab 
             label="DASHBOARD" 
-            sx={{ 
-              fontWeight: tabIndex === 0 ? 'bold' : 'normal',
-              color: tabIndex === 0 ? '#1b5e20' : 'inherit'
-            }} 
+            sx={{ fontWeight: tabIndex === 0 ? 'bold' : 'normal', color: tabIndex === 0 ? '#1b5e20' : 'inherit' }} 
+            id="user-management-tab-0"
+            aria-controls="user-management-panel-0"
           />
           <Tab 
             label="USERS LIST" 
-            sx={{ 
-              fontWeight: tabIndex === 1 ? 'bold' : 'normal',
-              color: tabIndex === 1 ? '#1b5e20' : 'inherit'
-            }} 
+            sx={{ fontWeight: tabIndex === 1 ? 'bold' : 'normal', color: tabIndex === 1 ? '#1b5e20' : 'inherit' }} 
+            id="user-management-tab-1"
+            aria-controls="user-management-panel-1"
           />
         </Tabs>
       </Box>
       
-      {/* Tab Panels */}
-      {tabIndex === 0 && (
-        <UserDashboard data={safeData} />
-      )}
-      
-      {tabIndex === 1 && (
-        <UsersList 
-          users={safeData.usersList} 
-          deletedUsers={safeData.deletedUsers}
-          handleEdit={handleEditUser}
-          handleDeactivateUser={handleUserDeactivation}
-          handleSendRecovery={handleSendRecovery} 
-          handleSendPasswordReset={handleSendPasswordReset} 
-          updateUserRole={handleRoleUpdate}
-        />
-      )}
-
-      {/* Notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      {/* --- Tab Panels --- */}
+      {/* Render conditionally, ensure proper ARIA attributes */}
+      <Box 
+        role="tabpanel"
+        hidden={tabIndex !== 0}
+        id="user-management-panel-0"
+        aria-labelledby="user-management-tab-0"
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity} 
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
+         {tabIndex === 0 && ( <UserDashboard data={safeData} /> )}
+      </Box>
+      <Box 
+        role="tabpanel"
+        hidden={tabIndex !== 1}
+        id="user-management-panel-1"
+        aria-labelledby="user-management-tab-1"
+      >
+         {tabIndex === 1 && ( 
+           <UsersList 
+              users={safeData.usersList} 
+              deletedUsers={safeData.deletedUsers}
+              handleEdit={handleEditUser}
+              handleDeactivateUser={handleUserDeactivation}
+              handleSendRecovery={handleSendRecovery} 
+              handleSendPasswordReset={handleSendPasswordReset} 
+              updateUserRole={handleRoleUpdate}
+           /> 
+         )}
+      </Box>
+
+      {/* --- Notifications (Snackbar) --- */}
+      <Snackbar
+        open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} // Center might be better on mobile
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled" sx={{ width: '100%' }}>
           {snackbar.message}  
         </Alert>
       </Snackbar>
       
-      {/* Add loading overlay if available */}
-      {loader && loader.LoadingOverlay && <loader.LoadingOverlay />}
-    </Box>
+      {/* Optional: Add custom loading overlay if provided by hook */}
+      {loader?.LoadingOverlay && <loader.LoadingOverlay />}
+    </Container> // End Container or Box
   );
 }
