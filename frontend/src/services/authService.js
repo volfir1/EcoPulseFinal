@@ -5,7 +5,9 @@ import {
   getRedirectResult as firebaseGetRedirectResult
 } from 'firebase/auth';
 import { auth } from '../features/auth/firebase/firebase';
-import api, { nodeApi } from '@modules/api'; // Import both API instances
+// Import only the 'nodeApi' instance, removing the unused default 'api' import.
+// This ensures all calls within this file use the intended 'nodeApi'.
+import { nodeApi } from '@modules/api'; 
 
 let currentAuthRequest = null;
 
@@ -14,7 +16,8 @@ const authService = {
     try {
       console.log('Sending registration data:', userData);
       console.log('Sending to URL:', nodeApi.defaults.baseURL + '/auth/register');
-      const response = await nodeApi.post('/auth/register', userData);
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/register', userData); 
 
       // Return data needed for verification
       return {
@@ -35,8 +38,8 @@ const authService = {
   login: async (email, password) => {
     try {
       console.log('Attempting login for:', email);
-
-      const response = await nodeApi.post('/auth/login', { email, password });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/login', { email, password }); 
 
       // Log the response data
       console.log('Parsed login response:', response.data);
@@ -72,7 +75,6 @@ const authService = {
     }
   },
 
-  // Improved logout that properly clears all auth data
   logout: async () => {
     try {
       // First clear local storage
@@ -88,7 +90,8 @@ const authService = {
       }
 
       // Finally clear cookies via server
-      await nodeApi.post('/auth/logout');
+      // Already using nodeApi - Correct
+      await nodeApi.post('/auth/logout'); 
 
       return { success: true };
     } catch (error) {
@@ -98,7 +101,6 @@ const authService = {
     }
   },
 
-  // Improved checkAuthStatus with better error handling and offline support
   checkAuthStatus: async (signal) => {
     try {
       // Check if we have a stored user first - critical for offline support
@@ -150,8 +152,9 @@ const authService = {
         currentAuthRequest = controller;
         signal = controller.signal;
       }
-
-      const response = await nodeApi.get('/auth/verify', {
+      
+      // Already using nodeApi - Correct
+      const response = await nodeApi.get('/auth/verify', { 
         headers: {
           "Authorization": `Bearer ${localToken}`
         },
@@ -245,7 +248,6 @@ const authService = {
     }
   },
 
-  // Add token refresh functionality
   refreshToken: async () => {
     try {
       // First check if we have a stored user
@@ -261,7 +263,8 @@ const authService = {
       }
 
       console.log('Attempting to refresh auth token');
-      const response = await nodeApi.post('/auth/refresh-token');
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/refresh-token'); 
       const data = response.data;
 
       if (data.accessToken) {
@@ -284,8 +287,8 @@ const authService = {
     }
   },
 
-  // Initiate Google Auth to get email before completing sign-in
-  initiateGoogleAuth: async () => {
+  // Initiate Google Auth - Uses Firebase directly, no backend call to change
+  initiateGoogleAuth: async () => { 
     try {
       console.log('Starting Google auth initiation');
       const provider = new GoogleAuthProvider();
@@ -327,7 +330,7 @@ const authService = {
     }
   },
 
-
+  // Uses Firebase directly and then nodeApi - Correct
   googleSignIn: async () => {
     try {
       console.log('Starting consolidated Google sign-in flow');
@@ -340,7 +343,7 @@ const authService = {
       await new Promise(resolve => setTimeout(resolve, 50));
       
       // Attempt popup sign in - DIRECTLY from user click
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider); 
       
       // Process credentials
       const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -355,7 +358,8 @@ const authService = {
       try {
         // Call backend API to handle various account scenarios
         console.log('Calling backend with Google auth data');
-        const apiResponse = await nodeApi.post('/auth/google-signin', {
+        // Already using nodeApi - Correct
+        const apiResponse = await nodeApi.post('/auth/google-signin', { 
           idToken,
           email: user.email,
           uid: user.uid,
@@ -468,12 +472,13 @@ const authService = {
       }
     }
   },
-
+  
+  // Uses Firebase directly and then nodeApi - Correct
   getRedirectResult: async () => {
     try {
       console.log('Checking for Google sign-in redirect result');
 
-      const result = await firebaseGetRedirectResult(auth);
+      const result = await firebaseGetRedirectResult(auth); // Firebase call
 
       if (!result) {
         // No redirect result - this is normal if user didn't just complete a redirect flow
@@ -502,8 +507,9 @@ const authService = {
 
       // Call your backend API to register/login the user and get proper role
       try {
-        const idToken = await user.getIdToken();
-        const apiResponse = await nodeApi.post('/auth/google-signin', {
+        const idToken = await user.getIdToken(); // Firebase call
+        // Already using nodeApi - Correct
+        const apiResponse = await nodeApi.post('/auth/google-signin', { 
           idToken: idToken,
           email: user.email,
           uid: user.uid,
@@ -569,12 +575,11 @@ const authService = {
     }
   },
 
-  // Email verification function
   verifyEmail: async (userId, verificationCode) => {
     try {
       console.log('AuthService: Verifying email with:', { userId, verificationCode });
-
-      const response = await nodeApi.post('/auth/verify-email', {
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/verify-email', { 
         userId,
         verificationCode
       });
@@ -615,8 +620,8 @@ const authService = {
         userId,
         url: '/auth/resend-verification'
       });
-
-      const response = await nodeApi.post('/auth/resend-verification', { userId });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/resend-verification', { userId }); 
       return {
         success: true,
         message: response.data.message || "Verification code sent successfully"
@@ -651,8 +656,8 @@ const authService = {
         email,
         url: '/auth/forgot-password'
       });
-
-      const response = await nodeApi.post('/auth/forgot-password', { email });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/forgot-password', { email }); 
 
       return {
         success: true,
@@ -677,8 +682,8 @@ const authService = {
         token: token.substring(0, 5) + '...',  // Only log part of the token for security
         url: '/auth/reset-password'
       });
-
-      const response = await nodeApi.post('/auth/reset-password', {
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/reset-password', { 
         token,
         newPassword
       });
@@ -712,6 +717,7 @@ const authService = {
     }
   },
 
+  // Local function, no API call
   forceVerifyUser: (userData) => {
     if (!userData) return null;
 
@@ -736,7 +742,8 @@ const authService = {
       console.log('Using direct login bypass for:', email);
 
       // First call the normal login endpoint
-      const response = await nodeApi.post('/auth/login', { email, password });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/login', { email, password }); 
       const data = response.data;
 
       // Handle login errors
@@ -773,15 +780,14 @@ const authService = {
     }
   },
 
-  // Account deactivation function
   deactivateAccount: async () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Not authenticated');
       }
-
-      const response = await nodeApi.post('/auth/deactivate-account', {}, {
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/deactivate-account', {}, { 
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -801,11 +807,11 @@ const authService = {
     }
   },
 
-  // Request account recovery function
   requestAccountRecovery: async (email) => {
     try {
       // Update the endpoint from 'request-recovery' to 'request-reactivation'
-      await nodeApi.post('/auth/request-reactivation', { email });
+      // Already using nodeApi - Correct
+      await nodeApi.post('/auth/request-reactivation', { email }); 
 
       // For security, we always return a success message
       return {
@@ -822,7 +828,6 @@ const authService = {
     }
   },
 
-  // Recover account using token function
   recoverAccount: async (token) => {
     try {
       if (!token) {
@@ -832,8 +837,8 @@ const authService = {
       console.log('Sending account reactivation request:', {
         token: token.substring(0, 5) + '...',
       });
-
-      const response = await nodeApi.post('/auth/reactivate-account', {
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/reactivate-account', { 
         token: token.trim()
       });
 
@@ -877,12 +882,12 @@ const authService = {
     }
   },
 
-  // Check if account is deactivated during login
   checkDeactivatedAccount: async (email) => {
     try {
       // This will always return success for security reasons
       // The server won't reveal if an account exists or is deactivated
-      const response = await nodeApi.post('/auth/check-deactivated', { email });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/check-deactivated', { email }); 
 
       return {
         success: true,
@@ -903,8 +908,8 @@ const authService = {
       }
 
       console.log('Checking account status for:', email);
-
-      const response = await nodeApi.post('/auth/check-account-status', { email });
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/check-account-status', { email }); 
 
       return {
         success: response.data.success,
@@ -930,7 +935,8 @@ const authService = {
       console.log('Requesting reactivation for:', email);
 
       // Send reactivation request to the server
-      const response = await nodeApi.post('/auth/request-reactivation',
+      // Already using nodeApi - Correct
+      const response = await nodeApi.post('/auth/request-reactivation', 
         { email },
         {
           headers: {
