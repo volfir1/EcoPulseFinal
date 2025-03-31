@@ -77,7 +77,9 @@ const RenewableEnergyPage = () => {
                      generation: parseFloat(item['Predicted Production']) || 0, 
                      nonRenewableEnergy: parseFloat(item['Non-Renewable Energy (GWh)']) || null,
                      population: parseFloat(item['Population (in millions)']) || null,
-                     gdp: parseFloat(item['Gross Domestic Product']) || null,
+                     gdp: item['Gross Domestic Product'] !== undefined && item['Gross Domestic Product'] !== null
+                     ? parseFloat(item['Gross Domestic Product'])
+                     : null,
                      isPredicted: false,
                      dateAdded: item.createdAt || new Date().toISOString(),
                      isDeleted: false // Already filtered
