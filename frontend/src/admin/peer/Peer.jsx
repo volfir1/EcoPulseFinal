@@ -584,7 +584,7 @@ const PeerToPeerAdminPrototype = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
-                        className="text-blue-600 hover:text-blue-900 mr-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition duration-150"
+                        className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded transition duration-150"
                         onClick={() => openModal(row)}
                       >
                         Edit

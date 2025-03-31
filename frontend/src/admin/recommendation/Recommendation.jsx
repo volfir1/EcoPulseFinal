@@ -854,7 +854,7 @@ const RecommendationAdminPrototype = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Tooltip title="Edit record" arrow>
                         <button 
-                          className="text-green-600 hover:text-green-900 mr-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 rounded"
+                          className="text-green-600 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 rounded"
                           onClick={() => {
                             const record = {
                               ...row,
@@ -866,14 +866,6 @@ const RecommendationAdminPrototype = () => {
                           }}
                         >
                           Edit
-                        </button>
-                      </Tooltip>
-                      <Tooltip title="Delete record" arrow>
-                        <button 
-                          className="text-red-600 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 rounded"
-                          onClick={() => handleDeleteRecord(row.id)}
-                        >
-                          Delete
                         </button>
                       </Tooltip>
                     </td>
