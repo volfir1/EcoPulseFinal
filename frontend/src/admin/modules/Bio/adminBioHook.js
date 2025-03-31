@@ -32,7 +32,7 @@ export const useGeothermalAnalytics = () => {
 const fetchData = useCallback(async (startYear, endYear) => {
   setLoading(true);
   try {
-    const response = await railwayApi.get(`/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
+    const response = await railwayApi.get(`/predictions/biomass/?start_year=${startYear}&end_year=${endYear}`);
     
     // Clean the response by replacing "NaN" with "null"
     // First convert response.data to a string if it's not already one

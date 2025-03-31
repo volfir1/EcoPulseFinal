@@ -48,6 +48,14 @@ const SolarAdmin = () => {
     chartRef
   } = useSolarAnalytics();
 
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success' // 'success', 'error', 'warning', 'info'
+  });
+  
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // State for modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -129,12 +137,13 @@ const SolarAdmin = () => {
   }, [recoverRecord]);
 
   // Form submit handler
-  const handleSubmit = useCallback(async () => {
+ const handleSubmit = useCallback(async () => {
     if (!selectedYear || !generationValue || !nonRenewableEnergy || !population || !gdp) {
       return;
     }
   
     try {
+      setIsUpdating(true); // Start loading
       setIsModalOpen(false);
       
       const payload = {
@@ -147,13 +156,33 @@ const SolarAdmin = () => {
   
       if (isEditing) {
         await updateRecord(selectedYear, payload);
+        setNotification({
+          open: true,
+          message: 'Record updated successfully!',
+          severity: 'success'
+        });
       } else {
         await addRecord(selectedYear, payload['Solar (GWh)']);
+        setNotification({
+          open: true,
+          message: 'Record added successfully!',
+          severity: 'success'
+        });
       }
+      
+      // Refresh the table data
+      await handleRefresh();
     } catch (error) {
       console.error('Error saving data:', error);
+      setNotification({
+        open: true,
+        message: 'Error saving data. Please try again.',
+        severity: 'error'
+      });
+    } finally {
+      setIsUpdating(false); // End loading
     }
-  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord]);
+  }, [selectedYear, generationValue, nonRenewableEnergy, population, gdp, isEditing, updateRecord, addRecord, handleRefresh]);
 
   // Export data handler - DEFINED BEFORE IT'S USED
   const handleExportData = useCallback(() => {
@@ -291,6 +320,16 @@ const SolarAdmin = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+       {isUpdating && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mb-4"></div>
+              <Typography variant="h6" className="text-gray-800">
+                Updating data...
+              </Typography>
+            </div>
+          </div>
+        )}
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
@@ -369,7 +408,7 @@ const SolarAdmin = () => {
         title={`Solar Power Generation Records (${yearRange.startYear} - ${yearRange.endYear})`}
         columns={tableColumns}
         data={tableData}
-        loading={tableLoading}
+        loading={tableLoading || isUpdating}
         selectable={true}
         searchable={true}
         exportable={true}
@@ -540,6 +579,25 @@ const SolarAdmin = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={3000}
+        onClose={() => setNotification({...notification, open: false})}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbar-root': {
+            top: '80px' // Adjust this value based on your header height
+          }
+        }}
+      >
+        <Alert 
+          onClose={() => setNotification({...notification, open: false})}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
