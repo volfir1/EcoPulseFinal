@@ -8,8 +8,8 @@ const SolarPanelModel = () => {
   
   // Load the model with proper error handling
   const gltf = useLoader(
-    GLTFLoader, 
-    '/3D/solar_panel.glb', 
+    GLTFLoader,
+    '/3D/solar_panel.glb',
     (loader) => {
       console.log('Loader set up successfully');
     },
@@ -45,6 +45,8 @@ const SolarPanelModel = () => {
             color: child.name.includes('panel') ? '#2244dd' : '#dddddd',
             metalness: 0.7,
             roughness: 0.3,
+            transparent: true, // Enable transparency support
+            opacity: 1.0 // Full opacity for the model itself
           });
         }
       });
