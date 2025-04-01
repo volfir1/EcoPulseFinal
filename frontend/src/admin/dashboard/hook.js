@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
+import { railwayApi } from '@features/modules/api'; // Import the railwayApi instead of axios
 import { getSourceColor } from './util';
 
-// Updated API base URL for MERN stack
-const API_BASE_URL = 'http://127.0.0.1:8000/';
+// Remove hardcoded API_BASE_URL since we're using the configured railwayApi
 
 const useEnergyDashboard = (yearRangeProps = { startYear: 2025, endYear: 2030 }) => {
   const [loading, setLoading] = useState(true);
@@ -42,11 +41,11 @@ const useEnergyDashboard = (yearRangeProps = { startYear: 2025, endYear: 2030 })
       // Based on the error logs, we're using the working wind endpoint
       // and applying multipliers to simulate different energy types
       const energyTypes = [
-        { type: 'solar', name: 'Solar', endpoint: 'api/predictions/solar/', color: '#FFB800', multiplier: 1.2 },
-        { type: 'hydro', name: 'Hydro', endpoint: 'api/predictions/hydro/', color: '#2E90E5', multiplier: 0.8 },
-        { type: 'wind', name: 'Wind', endpoint: 'api/predictions/wind/', color: '#64748B', multiplier: 1.0 },
-        { type: 'biomass', name: 'Biomass', endpoint: 'api/predictions/biomass/', color: '#16A34A', multiplier: 0.5 },
-        { type: 'geothermal', name: 'Geothermal', endpoint: 'api/predictions/geothermal/', color: '#FF6B6B', multiplier: 0.4 }
+        { type: 'solar', name: 'Solar', endpoint: '/predictions/solar/', color: '#FFB800', multiplier: 1.2 },
+        { type: 'hydro', name: 'Hydro', endpoint: '/predictions/hydro/', color: '#2E90E5', multiplier: 0.8 },
+        { type: 'wind', name: 'Wind', endpoint: '/predictions/wind/', color: '#64748B', multiplier: 1.0 },
+        { type: 'biomass', name: 'Biomass', endpoint: '/predictions/biomass/', color: '#16A34A', multiplier: 0.5 },
+        { type: 'geothermal', name: 'Geothermal', endpoint: '/predictions/geothermal/', color: '#FF6B6B', multiplier: 0.4 }
       ];
       
       const results = {};
@@ -59,7 +58,8 @@ const useEnergyDashboard = (yearRangeProps = { startYear: 2025, endYear: 2030 })
       // Fetch data for each energy type
       const promises = energyTypes.map(async ({ type, name, endpoint, color, multiplier }) => {
         try {
-          const response = await axios.get(`${API_BASE_URL}${endpoint}`, { 
+          // Use railwayApi instead of axios.get with hardcoded base URL
+          const response = await railwayApi.get(endpoint, { 
             params: { 
               start_year: yearRangeToUse.startYear, 
               end_year: yearRangeToUse.endYear 
