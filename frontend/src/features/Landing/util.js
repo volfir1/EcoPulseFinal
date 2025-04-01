@@ -20,25 +20,39 @@ import { Linkedin, Mail, Award } from 'lucide-react';
  */
 export const carouselData = [
   {
-    image: '/public/carousel/hydro.jpg',
+    image: '/carousel/hydro.jpg',
     title: "Hydro Power Energy",
     description: "Hydropower energy uses flowing or falling water to generate electricity, making it one of the most widely used renewable energy sources globally.",
     details: "In the Philippines, hydropower supplies about 10-12% of the country's electricity. With its abundant rivers and high rainfall, the nation hosts significant projects.",
     color: '#3498db'
   },
   {
-    image: '/public/carousel/solar.jpg',
+    image: '/carousel/solar.jpg',
     title: "Solar Energy",
     description: "Solar power harnesses the sun's energy to generate clean electricity, providing a sustainable solution for our growing energy needs.",
     details: "The Philippines has great potential for solar energy with an average of 5.1 kWh/m² per day of solar radiation.",
     color: '#f39c12'
   },
   {
-    image: '/public/carousel/wind.webp',
+    image: '/carousel/wind.jpg',
     title: "Wind Power",
     description: "Wind energy captures the natural power of wind through turbines, converting it into renewable electricity.",
     details: "The Philippines' wind energy sector is growing, with several wind farms contributing to the national power grid.",
     color: '#2ecc71'
+  },
+  {
+    image: '/carousel/geothermal.jpg',
+    title: "Geothermal Energy",
+    description: "Geothermal energy taps into Earth's internal heat to generate reliable and sustainable power.",
+    details: "The Philippines is the world's third-largest geothermal energy producer, with several active geothermal plants throughout the volcanic regions of the country.",
+    color: '#e74c3c'
+  },
+  {
+    image: '/carousel/biomass.jpg',
+    title: "Biomass Energy",
+    description: "Biomass energy converts organic materials into power, utilizing agricultural waste, forest residues, and dedicated energy crops.",
+    details: "In the Philippines, biomass has significant potential due to the country's large agricultural sector, with rice husks, coconut residues, and bagasse being common biomass sources.",
+    color: '#27ae60'
   }
 ];
 

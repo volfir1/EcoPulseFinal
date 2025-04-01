@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -33,6 +34,7 @@ import { Download } from 'lucide-react';
 // Enhanced Navbar with scroll effect and animations
 export const Navbar = ({ logo }) => {
   const { isScrolled } = useScrollEffect();
+ 
 
   return (
     <Box
@@ -155,6 +157,7 @@ export const HeroSection = ({
   goToNextSlide,
   goToSlide
 }) => {
+  const navigate = useNavigate();
   return (
     <Box
       sx={{
@@ -236,27 +239,29 @@ export const HeroSection = ({
               >
                 {carouselData[currentSlide].description}
               </Typography>
+              
               <Button
-                variant="contained"
-                endIcon={<ArrowRight />}
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.text,
-                  width: 'fit-content',
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 2,
-                  boxShadow: '0 4px 20px rgba(50, 168, 50, 0.4)',
-                  '&:hover': {
-                    bgcolor: theme.palette.primary.dark,
-                    boxShadow: '0 6px 25px rgba(50, 168, 50, 0.5)',
-                    transform: 'translateY(-3px)',
-                  },
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                Join Now
-              </Button>
+  variant="contained"
+  endIcon={<ArrowRight />}
+  onClick={() => navigate('/register')}
+  sx={{
+    bgcolor: theme.palette.primary.main,
+    color: theme.palette.primary.text,
+    width: 'fit-content',
+    px: 4,
+    py: 1.5,
+    borderRadius: 2,
+    boxShadow: '0 4px 20px rgba(50, 168, 50, 0.4)',
+    '&:hover': {
+      bgcolor: theme.palette.primary.dark,
+      boxShadow: '0 6px 25px rgba(50, 168, 50, 0.5)',
+      transform: 'translateY(-3px)',
+    },
+    transition: 'all 0.3s ease',
+  }}
+>
+  Join Now
+</Button>
             </Stack>
           </Grid>
 

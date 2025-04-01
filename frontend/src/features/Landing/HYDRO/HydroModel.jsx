@@ -1,117 +1,110 @@
 import React, { useRef, useEffect } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 
 const HydroPowerModel = () => {
   const modelRef = useRef();
   
-  // Load the FBX model with proper error handling
-  let fbx;
-  try {
-    fbx = useLoader(
-      FBXLoader, 
-      '/3D/hydro.fbx', // Ensure your FBX file is in this location
-      (loader) => {
-        loader.crossOrigin = 'anonymous';
-        console.log('Hydro power loader set up successfully');
-      }
-    );
-  } catch (error) {
-    console.error('Error loading hydro power model:', error);
-    // We'll handle the fallback through a return null
-    return null;
-  }
+  // Load the GLB model
+  const gltf = useLoader(
+    GLTFLoader, 
+    '/3D/gravity_dam.glb',
+    (loader) => {
+      loader.crossOrigin = 'anonymous';
+      console.log('Hydro power loader set up successfully');
+    }
+  );
   
   // Setup model once loaded
   useEffect(() => {
-    if (fbx) {
+    if (gltf && gltf.scene) {
       console.log('Hydro power model loaded successfully');
       
-      // Reset position and apply appropriate scale
-      fbx.position.set(0, -10, 0);
-      fbx.rotation.set(0, 0, 0);
-      fbx.scale.set(0.03, 0.03, 0.03); // FBX models often need different scaling than GLB
+      // Improved positioning and scaling for better visibility
+      gltf.scene.position.set(0, -3, 0);  // Moved up from -5 to -3
+      gltf.scene.rotation.set(0, Math.PI * 0.15, 0);  // Slight rotation for better angle
+      gltf.scene.scale.set(0.7, 0.7, 0.7);  // Increased from 0.5 to 0.7
       
-      // Center the model based on its bounding box
-      const box = new THREE.Box3().setFromObject(fbx);
-      const center = box.getCenter(new THREE.Vector3());
-      fbx.position.x -= center.x;
-      fbx.position.y -= center.y;
-      fbx.position.z -= center.z;
-      
-      // Apply materials to all meshes
-      fbx.traverse((child) => {
+      // Apply materials and shadows to all meshes in the model
+      gltf.scene.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
           
-          // Apply appropriate colors based on part type
-          let material;
+          // Enhance materials for better visibility
+          if (child.material) {
+            // Increase metalness and reduce roughness for better reflections
+            child.material.metalness = Math.min(child.material.metalness + 0.1, 1);
+            child.material.roughness = Math.max(child.material.roughness - 0.1, 0);
+          }
           
-          if (child.name.includes('water') || child.name.includes('river')) {
-            // Blue water
-            material = new THREE.MeshStandardMaterial({
+          // Enhanced water materials
+          if (child.name.toLowerCase().includes('water')) {
+            child.material = new THREE.MeshStandardMaterial({
               color: '#3498db',
-              metalness: 0.1,
-              roughness: 0.2,
+              metalness: 0.2,
+              roughness: 0.1,
               transparent: true,
-              opacity: 0.8,
+              opacity: 0.85,
               emissive: '#2980b9',
-              emissiveIntensity: 0.2
+              emissiveIntensity: 0.3
             });
-          } else if (child.name.includes('dam') || child.name.includes('structure')) {
-            // Gray concrete dam
-            material = new THREE.MeshStandardMaterial({
-              color: '#7f8c8d',
-              metalness: 0.1,
+          }
+          
+          // Enhance dam structure materials if present
+          if (child.name.toLowerCase().includes('dam') || child.name.toLowerCase().includes('structure')) {
+            // Keep original material but enhance it
+            const originalMaterial = child.material;
+            child.material = new THREE.MeshStandardMaterial({
+              color: originalMaterial.color || new THREE.Color('#aaaaaa'),
+              metalness: 0.15,
               roughness: 0.8,
-            });
-          } else if (child.name.includes('turbine') || child.name.includes('generator')) {
-            // Metal parts
-            material = new THREE.MeshStandardMaterial({
-              color: '#95a5a6',
-              metalness: 0.6,
-              roughness: 0.2,
-            });
-          } else {
-            // Default material - concrete-like
-            material = new THREE.MeshStandardMaterial({
-              color: '#bdc3c7',
-              metalness: 0.1,
-              roughness: 0.5,
+              emissive: new THREE.Color('#111111'),
+              emissiveIntensity: 0.05
             });
           }
-          
-          // Apply material
-          child.material = material;
         }
       });
     }
-  }, [fbx]);
+  }, [gltf]);
   
-  // Subtle water animation if applicable
-  useFrame(({ clock }) => {
-    if (fbx) {
-      // Find water parts and animate them
-      fbx.traverse((child) => {
-        if (child.isMesh && (child.name.includes('water') || child.name.includes('river'))) {
-          // Gentle wave motion based on time
-          const time = clock.getElapsedTime();
-          const height = Math.sin(time * 0.5) * 0.05;
-          child.position.y = child.userData.originalY || 0 + height;
-          
-          // Store original Y position if not already stored
-          if (child.userData.originalY === undefined) {
-            child.userData.originalY = child.position.y;
+  // Animation for water elements
+  const isCanvasAvailable = typeof useFrame === 'function';
+  
+  if (isCanvasAvailable) {
+    useFrame(({ clock }) => {
+      if (gltf && gltf.scene) {
+        // Find water parts and animate them
+        gltf.scene.traverse((child) => {
+          if (child.isMesh && child.name.toLowerCase().includes('water')) {
+            // More dynamic wave motion
+            const time = clock.getElapsedTime();
+            const height = Math.sin(time * 0.8) * 0.08;
+            
+            // Store original Y position if not already stored
+            if (child.userData.originalY === undefined) {
+              child.userData.originalY = child.position.y;
+            }
+            
+            child.position.y = child.userData.originalY + height;
+            
+            // Also add slight rotation for more natural movement
+            child.rotation.z = Math.sin(time * 0.4) * 0.02;
           }
+        });
+        
+        // Slight overall model "breathing" for more visual interest
+        if (modelRef.current) {
+          const time = clock.getElapsedTime();
+          modelRef.current.rotation.y = Math.sin(time * 0.1) * 0.03 + Math.PI * 0.15;
         }
-      });
-    }
-  });
+      }
+    });
+  }
 
-  // Return the model
-  return fbx ? <primitive ref={modelRef} object={fbx} /> : null;
+  // Return the model with ref
+  return <primitive ref={modelRef} object={gltf.scene} />;
 };
 
 export default HydroPowerModel;

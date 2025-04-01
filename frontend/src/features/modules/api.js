@@ -26,7 +26,7 @@ const api = axios.create({
 const nodeApi = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 30000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -36,7 +36,7 @@ const nodeApi = axios.create({
 const railwayApi = axios.create({
   baseURL: RAILWAY_API_URL,
   withCredentials: true,
-  timeout: 30000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }

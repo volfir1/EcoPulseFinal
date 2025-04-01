@@ -8,7 +8,7 @@ import * as THREE from 'three';
 // Simple loading indicator
 const LoadingBox = () => (
   <mesh>
-    <boxGeometry args={[1, 1, 1]} />
+    <boxGeometry args={[1.5, 1.5, 1.5]} />
     <meshStandardMaterial color="#3498db" wireframe />
   </mesh>
 );
@@ -36,6 +36,24 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Wrapper to scale up the model
+const EnlargedHydroPowerModel = () => {
+  return (
+    <group scale={[1.8, 1.8, 1.8]} position={[0, -2, 0]}>
+      <HydroPowerModel />
+    </group>
+  );
+};
+
+// Wrapper to scale up the fallback
+const EnlargedHydroPowerFallback = () => {
+  return (
+    <group scale={[1.8, 1.8, 1.8]} position={[0, -2, 0]}>
+      <HydroPowerFallback />
+    </group>
+  );
+};
+
 const HydroPower3DScene = () => {
   // Track loading state for a better user experience
   const [isLoading, setIsLoading] = useState(true);
@@ -48,12 +66,13 @@ const HydroPower3DScene = () => {
   
   return (
     <div style={{ 
-      width: '100%', 
-      height: 350,  // Match original height from hero section
+      width: 600,  // Expanded from 110% to 120%
+      height: 500,    // Expanded from 550 to 600
       background: 'transparent',
       position: 'relative',
       borderRadius: '12px',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      margin: '-20px'  // Negative margin to offset increased size
     }}>
       {isLoading && (
         <div style={{
@@ -75,43 +94,48 @@ const HydroPower3DScene = () => {
       
       <Canvas 
         shadows 
-        camera={{ position: [15, 8, 15], fov: 40 }}
+        camera={{ 
+          position: [20, 6, 20],  // Adjusted camera position for better view
+          fov: 75                 // Wider field of view to see more of the model
+        }}
+        gl={{ alpha: true, antialias: true }}
         onCreated={state => {
           // Set clear color to transparent to blend with background
-          state.gl.setClearColor(new THREE.Color('transparent'));
+          state.gl.setClearColor(new THREE.Color(0xffffff), 0);
         }}
       >
         {/* Scene lighting */}
-        <ambientLight intensity={0.4} />
+        <ambientLight intensity={0.5} /> {/* Increased ambient light */}
         <directionalLight 
-          intensity={1} 
+          intensity={1.2}        // Increased light intensity
           position={[5, 10, 5]} 
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
         />
         <directionalLight 
-          intensity={0.5} 
+          intensity={0.7}        // Increased fill light
           position={[-5, 5, -5]} 
         />
         
-        {/* Try to load the FBX model, with fallback */}
+        {/* Try to load the GLB model, with fallback */}
         <Suspense fallback={<LoadingBox />}>
-          <ErrorBoundary fallback={<HydroPowerFallback />}>
-            <HydroPowerModel />
+          <ErrorBoundary fallback={<EnlargedHydroPowerFallback />}>
+            <EnlargedHydroPowerModel />
           </ErrorBoundary>
         </Suspense>
         
-        {/* Static camera controls */}
+        {/* Camera controls */}
         <OrbitControls 
           enableZoom={true}
           enablePan={true}
-          minDistance={10}
-          maxDistance={50}
+          minDistance={6}        // Reduced to allow closer zoom
+          maxDistance={50}       // Increased max distance
           minPolarAngle={0}
           maxPolarAngle={Math.PI / 2}
           enableDamping={true}
           dampingFactor={0.05}
+          target={[0, 0, 0]}     // Set target to center of model
         />
       </Canvas>
     </div>

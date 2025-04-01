@@ -3,18 +3,19 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import SolarPanelModel from './SolarPanel';
 import * as THREE from 'three';
+
 // Simple loading indicator that's clearly visible
 const LoadingBox = () => (
   <mesh>
-    <boxGeometry args={[1, 1, 1]} />
+    <boxGeometry args={[0.5, 0.5, 0.5]} />
     <meshStandardMaterial color="#32a832" wireframe />
   </mesh>
 );
 
-// Fallback component in case the model fails to load
+// Fallback component in case the model fails to load - scaled down
 const FallbackSolarPanel = () => {
   return (
-    <group>
+    <group scale={[0.5, 0.5, 0.5]}>
       <mesh position={[0, -0.5, 0]}>
         <boxGeometry args={[2, 0.1, 1.5]} />
         <meshStandardMaterial color="#555555" />
@@ -27,38 +28,52 @@ const FallbackSolarPanel = () => {
   );
 };
 
+// Wrapper component to scale down the original model
+const ScaledSolarPanelModel = () => {
+  return (
+    <group scale={[0.5, 0.5, 0.5]}>
+      <SolarPanelModel />
+    </group>
+  );
+};
+
 const SolarPanel3DScene = () => {
   return (
-    <div style={{ width: '200%', height: 450, background: '#f0f0f0' }}>
-      <Canvas 
-        shadows 
-        camera={{ position: [3, 3, 3], fov: 50 }}
+    <div style={{ width: '200%', height: 450 }}>
+      <Canvas
+        shadows
+        camera={{ 
+          position: [4, 4, 4], // Move camera further out
+          fov: 40, // Narrower field of view makes the model appear smaller
+          near: 0.1,
+          far: 1000
+        }}
+        gl={{ alpha: true, antialias: true }}
         onCreated={state => {
-          // Set clear color to match your page background
-          state.gl.setClearColor(new THREE.Color('#a9bba9'));
+          state.gl.setClearColor(new THREE.Color('#ffffff'), 0);
         }}
       >
         {/* Simple lighting setup that won't cause issues */}
         <ambientLight intensity={0.6} />
-        <directionalLight 
-          intensity={0.8} 
-          position={[5, 5, 5]} 
-          castShadow 
+        <directionalLight
+          intensity={0.8}
+          position={[5, 5, 5]}
+          castShadow
         />
         
-        {/* Scene components with error boundary */}
+        {/* Centered scene with error boundary */}
         <Suspense fallback={<LoadingBox />}>
           <ErrorBoundary fallback={<FallbackSolarPanel />}>
-            <SolarPanelModel />
+            <ScaledSolarPanelModel />
           </ErrorBoundary>
         </Suspense>
         
-        {/* Simple controls */}
-        <OrbitControls 
+        {/* Controls with adjusted distances */}
+        <OrbitControls
           enableZoom={true}
           enablePan={false}
-          minDistance={2}
-          maxDistance={10}
+          minDistance={3.5}
+          maxDistance={15}
           target={[0, 0, 0]}
         />
       </Canvas>
