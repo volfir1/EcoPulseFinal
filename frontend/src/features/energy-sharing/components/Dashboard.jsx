@@ -297,11 +297,28 @@ const EnergySharing = () => {
       });
       
       if (response.data.status === 'success') {
+        // Handle both new API format (data) and old format (predictions)
+        const responseData = response.data.data || response.data.predictions;
+        
+        if (!responseData || !Array.isArray(responseData)) {
+          logger.error('Invalid response data structure:', response.data);
+          setError('Error: Invalid data structure received from API');
+          setLocations([]);
+          return;
+        }
+        
         // Add coordinates to each location
-        const locationsWithCoordinates = response.data.predictions.map(location => ({
-          ...location,
-          coordinates: locationCoordinates[location.Place] || { lat: 0, lng: 0 }
-        }));
+        const locationsWithCoordinates = responseData.map(location => {
+          // Handle both new and old response structure formats
+          const place = location.place || location.Place;
+          
+          return {
+            ...location,
+            // Ensure Place property exists for component consistency
+            Place: place,
+            coordinates: locationCoordinates[place] || { lat: 0, lng: 0 }
+          };
+        });
         
         setLocations(locationsWithCoordinates);
       } else {
@@ -357,9 +374,12 @@ const EnergySharing = () => {
     const totals = {};
 
     locations.forEach(location => {
-      const place = location.Place;
-      const energyType = location['Energy Type'];
-      const predictedValue = location['Predicted Value'];
+      const place = location.Place || location.place; // Handle both formats
+      
+      // Handle both new and old API response data structures
+      const energyType = location['Energy Type'] || Object.keys(location.metrics || {})[0];
+      const predictedValue = location['Predicted Value'] || 
+                             (location.metrics ? location.metrics[energyType] : 0);
 
       if (!totals[place]) {
         totals[place] = {
@@ -376,32 +396,67 @@ const EnergySharing = () => {
         };
       }
 
-      if (energyType === 'Total Power Generation (GWh)') {
-        totals[place].totalPredictedGeneration += predictedValue;
-      }
+      // Handle both old and new data structures
+      if (location.metrics) {
+        // New structure with metrics object
+        const metrics = location.metrics;
+        if (metrics['Total Power Generation (GWh)']) {
+          totals[place].totalPredictedGeneration += parseFloat(metrics['Total Power Generation (GWh)']);
+        }
+        
+        if (metrics['Estimated Consumption (GWh)']) {
+          totals[place].totalConsumption += parseFloat(metrics['Estimated Consumption (GWh)']);
+        }
+        
+        if (metrics['Solar (GWh)']) {
+          totals[place].solar += parseFloat(metrics['Solar (GWh)']);
+        }
+        
+        if (metrics['Wind (GWh)']) {
+          totals[place].wind += parseFloat(metrics['Wind (GWh)']);
+        }
+        
+        if (metrics['Hydro (GWh)']) {
+          totals[place].hydropower += parseFloat(metrics['Hydro (GWh)']);
+        }
+        
+        if (metrics['Geothermal (GWh)']) {
+          totals[place].geothermal += parseFloat(metrics['Geothermal (GWh)']);
+        }
+        
+        if (metrics['Biomass (GWh)']) {
+          totals[place].biomass += parseFloat(metrics['Biomass (GWh)']);
+        }
+      } 
+      else {
+        // Old structure with Energy Type and Predicted Value
+        if (energyType === 'Total Power Generation (GWh)') {
+          totals[place].totalPredictedGeneration += parseFloat(predictedValue);
+        }
 
-      if (energyType.includes('Estimated Consumption (GWh)')) {
-        totals[place].totalConsumption += predictedValue;
-      }
+        if (energyType.includes('Estimated Consumption (GWh)')) {
+          totals[place].totalConsumption += parseFloat(predictedValue);
+        }
 
-      if (energyType === 'Solar (GWh)') {
-        totals[place].solar += predictedValue;
-      }
+        if (energyType === 'Solar (GWh)') {
+          totals[place].solar += parseFloat(predictedValue);
+        }
 
-      if (energyType === 'Wind (GWh)') {
-        totals[place].wind += predictedValue;
-      }
+        if (energyType === 'Wind (GWh)') {
+          totals[place].wind += parseFloat(predictedValue);
+        }
 
-      if (energyType === 'Hydro (GWh)') {
-        totals[place].hydropower += predictedValue;
-      }
+        if (energyType === 'Hydro (GWh)') {
+          totals[place].hydropower += parseFloat(predictedValue);
+        }
 
-      if (energyType === 'Geothermal (GWh)') {
-        totals[place].geothermal += predictedValue;
-      }
+        if (energyType === 'Geothermal (GWh)') {
+          totals[place].geothermal += parseFloat(predictedValue);
+        }
 
-      if (energyType === 'Biomass (GWh)') {
-        totals[place].biomass += predictedValue;
+        if (energyType === 'Biomass (GWh)') {
+          totals[place].biomass += parseFloat(predictedValue);
+        }
       }
     });
 

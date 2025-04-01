@@ -932,7 +932,7 @@ const PeerToPeerAdminPrototype = () => {
             </div>
             
             {/* Additional Parameters */}
-            <div className="border p-4 rounded-md bg-blue-50">
+            {/* <div className="border p-4 rounded-md bg-blue-50">
               <h3 className="text-lg font-medium mb-4">Cost Parameters</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <NumberBox
@@ -948,7 +948,7 @@ const PeerToPeerAdminPrototype = () => {
                   placeholder="Enter value"
                 />
               </div>
-            </div>
+            </div> */}
           </Box>
         </DialogContent>
         <DialogActions className="p-4">
