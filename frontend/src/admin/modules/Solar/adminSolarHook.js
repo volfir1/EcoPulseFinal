@@ -41,7 +41,7 @@ export const useSolarAnalytics = () => {
     // Replace "NaN" with "null" in the response string
     return response.replace(/NaN/g, 'null');
   };
-
+//test
   // Fetch data based on selected year range
   const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(true);
