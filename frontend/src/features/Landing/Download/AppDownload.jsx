@@ -208,7 +208,7 @@ const AppDownloadPage = () => {
                     {/* App Screenshot */}
                     <Box
                       component="img"
-                      src="/public/mobile-show.jpg" // Add your app screenshot image here
+                      src="/mobile-show.jpg" // Add your app screenshot image here
                       alt="EcoPulse Mobile App"
                       onError={(e) => {
                         e.target.onerror = null;
@@ -387,7 +387,7 @@ const AppDownloadPage = () => {
                 >
                   <Box
                     component="img"
-                    src="/Ecopulse-QR.png" // Replace with your actual QR code image path
+                    src="/EcoQR.svg" // Replace with your actual QR code image path
                     alt="EcoPulse App QR Code"
                     sx={{
                       width: '100%',

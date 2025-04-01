@@ -229,7 +229,7 @@ export const getColorWithOpacity = (baseColor, opacity = 0.2) => {
 export const advisorData = {
   name: "Prof. Pops V. Madriaga",
   role: "Thesis Advisor",
-  image: "/public/prof.jpg", // Replace with actual image path
+  image: "/prof.jpg", // Replace with actual image path
   acknowledgment: "We extend our heartfelt gratitude to Prof. Pops V. Madriaga for her exceptional guidance, unwavering support, and invaluable insights throughout our thesis journey. Her expertise in renewable energy systems and commitment to sustainable development has been instrumental in shaping our project. Beyond technical guidance, she inspired us to think critically and pursue innovative solutions to real-world challenges facing our communities.",
   quote: "Her dedication to academic excellence and passion for sustainable energy solutions has not only enhanced the quality of our research but has also instilled in us a deeper appreciation for the impact our work can have on building a greener future for the Philippines.",
   socialLinks: [
