@@ -195,10 +195,10 @@ export const usePeerToPeer = () => {
       let response;
       if (isEditing && selectedRecord._id) {
         // Update existing record
-        response = await railwayApi.put(`/api/peertopeer/records/${selectedRecord._id}`, payload);
+        response = await railwayApi.put(`/peertopeer/records/${selectedRecord._id}`, payload);
       } else {
         // Create new record
-        response = await railwayApi.post('/api/peertopeer/records', payload);
+        response = await railwayApi.post('/create/peertopeer/', payload);
       }
       
       if (response.data.status === 'success') {

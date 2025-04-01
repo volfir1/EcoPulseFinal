@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../features/modules/api';
+import { railwayApi } from '@modules/api';
 
 export const usePeerForm = (initialRecord = {}) => {
   const [formValues, setFormValues] = useState({
@@ -247,7 +248,7 @@ export const usePeerForm = (initialRecord = {}) => {
       // Determine if this is an edit or a new record
       if (isEditing) {
         // Update an existing record
-        const response = await api.put(`/api/update/${formValues.year}/`, formattedData);
+        const response = await railwayApi.put(`/update/${formValues.year}/`, formattedData);
         console.log('Record updated successfully:', response.data);
         return {
           success: true,
@@ -256,7 +257,7 @@ export const usePeerForm = (initialRecord = {}) => {
         };
       } else {
         // Create a new record
-        const response = await api.post('/api/create/peertopeer/', formattedData);
+        const response = await railwayApi.post('/create/peertopeer/', formattedData);
         console.log('Record created successfully:', response.data);
         return {
           success: true,
