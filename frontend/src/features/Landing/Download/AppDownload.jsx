@@ -387,7 +387,7 @@ const AppDownloadPage = () => {
                 >
                   <Box
                     component="img"
-                    src="/EcoQR.svg" // Replace with your actual QR code image path
+                    src="/EcoQRCode.svg" // Replace with your actual QR code image path
                     alt="EcoPulse App QR Code"
                     sx={{
                       width: '100%',

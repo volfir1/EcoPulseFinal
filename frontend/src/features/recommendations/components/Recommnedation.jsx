@@ -157,7 +157,7 @@ const EnergyRecommendations = () => {
               </Typography>
             </Box>
             <Box>
-               <Typography component="label" variant="body2" fontWeight="medium" sx={{ display: 'block', mb: 1, color: 'text.secondary' }}>
+               <Typography component="label" variant="body2" fontWeight="medium" sx={{ display: 'block', mb: 1, color: 'text.secondary', marginTop: '-95px' }}>
                 Investment Year
               </Typography>
               <SingleYearPicker
