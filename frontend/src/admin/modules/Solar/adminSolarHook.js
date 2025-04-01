@@ -5,7 +5,6 @@ import { useSnackbar } from '@shared/index';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-
 export const useSolarAnalytics = () => {
   // Properly extract the snackbar function
   const toast = useSnackbar();
