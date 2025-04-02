@@ -400,7 +400,7 @@ const RenewableEnergyPage = () => {
                       </Box>
                       <Box>
                         <Typography variant="caption" color="text.secondary" display="block">GDP (Billion)</Typography> {/* Clarify unit */}
-                        <Typography variant="body2">{record.gdp ? `$${record.gdp.toLocaleString()}` : 'N/A'}</Typography>
+                        <Typography variant="body2">{record.gdp ? `₱${record.gdp.toLocaleString()}` : 'N/A'}</Typography>
                       </Box>
                        <Box>
                          <Typography variant="caption" color="text.secondary" display="block">Date Added</Typography>
