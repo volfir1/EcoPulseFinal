@@ -489,13 +489,13 @@ const Dashboard = () => {
           return (
             <div key={type} className="rounded-lg p-4 md:p-6 bg-white shadow-md relative" style={borderStyle}>
               <div className="absolute top-3 md:top-4 right-3 md:right-4">
-                <Link to={`/modules/${type}`}>
+                {/* <Link to={`/modules/${type}`}>
                   <button 
                     className="w-6 h-6 md:w-8 md:h-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
                   >
                     <ArrowUpRight size={isMobile ? 12 : 14} className="text-gray-700" />
                   </button>
-                </Link>
+                </Link> */}
               </div>
               <div className="flex items-center mb-2 md:mb-4">
                 <Icon size={isMobile ? 16 : 20} style={{ color }} className="mr-2 flex-shrink-0" />
