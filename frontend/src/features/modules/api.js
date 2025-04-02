@@ -16,7 +16,7 @@ const RAILWAY_API_URL =
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true, // Important for cookies/auth
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json'
   }
@@ -26,7 +26,7 @@ const api = axios.create({
 const nodeApi = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }

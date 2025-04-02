@@ -7,7 +7,9 @@ import {
   DialogActions,
   IconButton,
   Typography,
-  Box
+  Box,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Sun, X } from 'lucide-react';
@@ -21,7 +23,7 @@ import {
   NumberBox,
   useDataTable
 } from '@shared/index';
-import{Snackbar, Alert}from '@mui/material';
+
 import useSolarAnalytics from './adminSolarHook';
 import { getTableColumns, formatDataForChart, getChartConfig, generateSampleData, validateInputs, recoverData } from './adminSolarUtil';
 

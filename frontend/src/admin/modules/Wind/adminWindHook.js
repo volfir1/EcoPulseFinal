@@ -111,7 +111,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
       
       // Add title and metadata
       doc.setFontSize(16);
-      doc.text('Geothermal Power Generation Summary', 15, 15);
+      doc.text('Wind Power Generation Summary', 15, 15);
       
       doc.setFontSize(11);
       doc.text(`Year Range: ${selectedStartYear} - ${selectedEndYear}`, 15, 25);
@@ -209,7 +209,7 @@ const fetchData = useCallback(async (startYear, endYear) => {
     try {
       const payload = {
         Year: year,
-        'Geothermal (GWh)': value
+        'Wind (GWh)': value
       };
       
       await railwayApi.post('/predictions/wind/', payload);

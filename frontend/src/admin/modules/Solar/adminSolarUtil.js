@@ -1,7 +1,7 @@
 // adminGeoUtil.js
 import React from 'react';
 import { AppIcon, theme } from '@shared/index';
-import Snackbar from '@mui/material';
+
 // Get table columns with memoized action buttons
 export const getTableColumns = (handleEdit, handleDelete, handleRecover, data) => [
   { 

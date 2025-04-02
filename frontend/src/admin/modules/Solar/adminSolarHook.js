@@ -5,6 +5,7 @@ import { useSnackbar } from '@shared/index';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+
 export const useSolarAnalytics = () => {
   // Properly extract the snackbar function
   const toast = useSnackbar();
@@ -41,7 +42,7 @@ export const useSolarAnalytics = () => {
     // Replace "NaN" with "null" in the response string
     return response.replace(/NaN/g, 'null');
   };
-//test
+
   // Fetch data based on selected year range
   const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(true);
