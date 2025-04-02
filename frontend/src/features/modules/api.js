@@ -5,12 +5,12 @@ import axios from 'axios';
 const API_URL = 
   (typeof process !== 'undefined' ? process.env.REACT_APP_API_URL : undefined) || 
   (import.meta && import.meta.env ? import.meta.env.VITE_API_URL : undefined) || 
-  'https://ecopulsebackend-1.onrender.com';
+  'https://ecopulsebackend-1.onrender.com/api';
 
 const RAILWAY_API_URL = 
   (typeof process !== 'undefined' ? process.env.REACT_APP_RAILWAY_API_URL : undefined) || 
   (import.meta && import.meta.env ? import.meta.env.VITE_RAILWAY_API_URL : undefined) || 
-  'https://ecopulsebackend.onrender.com';
+  'https://ecopulsebackend.onrender.com/api';
 
 // Create an instance of axios for the primary API
 const api = axios.create({
