@@ -22,7 +22,7 @@ export const useEnergyRecommendations = () => {
   const [error, setError] = useState(null);
   
   // Initialize budget and year with default values
-  const [budgetValue, setBudgetValue] = useState("50000"); 
+  const [budgetValue, setBudgetValue] = useState("100000"); 
   const [investmentYear, setInvestmentYear] = useState(2026);
   
   // Refs for tracking requests and timeouts

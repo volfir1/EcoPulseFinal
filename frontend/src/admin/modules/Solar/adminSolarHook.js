@@ -46,7 +46,7 @@ export const useSolarAnalytics = () => {
   // Fetch data based on selected year range
   const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(true);
-    try {
+    try { 
       console.log(`Fetching solar data for years ${startYear} to ${endYear}`);
       
       const response = await railwayApi.get(`/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);

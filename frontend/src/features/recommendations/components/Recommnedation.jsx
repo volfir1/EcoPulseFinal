@@ -153,7 +153,7 @@ const EnergyRecommendations = () => {
                 )}
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                Minimum: ₱15,000
+                Minimum: ₱100,000
               </Typography>
             </Box>
             <Box>
@@ -202,7 +202,7 @@ const EnergyRecommendations = () => {
           {/* Card 1: Renewable Energy Potential */}
           <InfoCard
              title="Solar Potential"
-             description={`Location: ${cityData.city || 'N/A'}`}
+            //  description={`Location: ${cityData.city || 'N/A'}`}
              titleIcon="solar"
              titleIconBg="yellow.100"
              titleIconColor="text-yellow-700" // Tailwind color class
@@ -211,9 +211,9 @@ const EnergyRecommendations = () => {
              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
                Potential: <Typography component="span" fontWeight="medium">{cityData.location?.solarPotential || "High"}</Typography>
              </Typography>
-             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+             {/* <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                Average Irradiation: ~5.5 kWh/m²/day
-             </Typography>
+             </Typography> */}
           </InfoCard>
 
 
