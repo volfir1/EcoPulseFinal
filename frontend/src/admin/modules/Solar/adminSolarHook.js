@@ -47,50 +47,50 @@ export const useSolarAnalytics = () => {
   const fetchData = useCallback(async (startYear, endYear) => {
     setLoading(true);
     try {
+      console.log(`Fetching solar data for years ${startYear} to ${endYear}`);
+      
       const response = await railwayApi.get(`/predictions/solar/?start_year=${startYear}&end_year=${endYear}`);
+      console.log("Raw API response:", response);
       
-      // Clean the response by replacing "NaN" with "null"
-      // First convert response.data to a string if it's not already one
-      const dataString = typeof response.data === 'string' 
-        ? response.data 
-        : JSON.stringify(response.data);
-      
-      // Now clean the string
-      const cleanedResponse = cleanResponse(dataString);
-
-      // Parse the cleaned JSON string
-      const responseData = JSON.parse(cleanedResponse);
-
-      // Check if the response contains the expected data
-      if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
-        const formattedData = responseData.predictions.map(item => ({
-          date: item.Year,
-          value: parseFloat(item['Predicted Production']),
-          nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
-          population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
-          gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
-          isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
-          isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
-        }));
-
-        // Calculate current projection
-        const latestYear = Math.max(...formattedData.map(item => item.date));
-        const latestPrediction = formattedData.find(item => item.date === latestYear);
-        if (latestPrediction) {
-          setCurrentProjection(latestPrediction.value);
+      // Check if we have valid data before processing
+      if (response && response.data) {
+        // Process raw response data first
+        let responseData = response.data;
+        
+        // Check if the response contains the expected data
+        if (responseData.status === "success" && Array.isArray(responseData.predictions)) {
+          console.log("Processing predictions:", responseData.predictions);
+          
+          const formattedData = responseData.predictions.map(item => ({
+            date: item.Year,
+            value: parseFloat(item['Predicted Production'] || 0),
+            nonRenewableEnergy: item.isPredicted ? null : (item['Non-Renewable Energy (GWh)'] ? parseFloat(item['Non-Renewable Energy (GWh)']) : null),
+            population: item.isPredicted ? null : (item['Population (in millions)'] ? parseFloat(item['Population (in millions)']) : null),
+            gdp: item.isPredicted ? null : (item['Gross Domestic Product'] === null ? null : parseFloat(item['Gross Domestic Product'])),
+            isPredicted: item.isPredicted !== undefined ? item.isPredicted : false,
+            isDeleted: item.isDeleted !== undefined ? item.isDeleted : false 
+          }));
+  
+          // Calculate current projection
+          const latestYear = Math.max(...formattedData.map(item => item.date));
+          const latestPrediction = formattedData.find(item => item.date === latestYear);
+          if (latestPrediction) {
+            setCurrentProjection(latestPrediction.value);
+          }
+  
+          setGenerationData(formattedData);
+        } else {
+          console.error("Invalid response format:", responseData);
+          enqueueSnackbar('Invalid data format in API response', { variant: 'error' });
         }
-
-        // Log the raw fetched data and the formatted data to verify the isPredicted column
-        console.log("Raw fetched data:", responseData.predictions);
-        console.log("Formatted data:", formattedData);
-
-        setGenerationData(formattedData);
       } else {
-        throw new Error("Invalid data format in API response");
+        console.error("Empty or invalid response received");
+        enqueueSnackbar('Empty or invalid response from server', { variant: 'error' });
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      enqueueSnackbar('Failed to fetch data. Please try again.', { variant: 'error' });
+      console.error('Error details:', error.response || error.message);
+      enqueueSnackbar(`Error: ${error.response?.data?.message || error.message}`, { variant: 'error' });
     } finally {
       setLoading(false);
     }
