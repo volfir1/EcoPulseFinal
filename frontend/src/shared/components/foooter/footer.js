@@ -91,21 +91,21 @@ const Footer = ({ showTerms = true }) => {
           <div className="border-t border-gray-200 pt-8">
             <p className="text-center text-gray-500 text-sm">
               © {new Date().getFullYear()} EcoPulse. All rights reserved. By using this service, you agree to our{' '}
-              <a 
+              {/* <a 
                 href="#" 
                 className="text-primary-600 hover:underline"
                 style={{ color: primary.main }}
               >
                 Terms of Service
-              </a>
+              </a> */}
               {' '}and{' '}
-              <a 
+              {/* <a 
                 href="#" 
                 className="text-primary-600 hover:underline"
                 style={{ color: primary.main }}
               >
                 Privacy Policy
-              </a>
+              </a> */}
               .
             </p>
           </div>

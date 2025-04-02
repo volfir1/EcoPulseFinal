@@ -1036,11 +1036,11 @@ export const Footer = () => {
             </Stack>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Typography variant="h6" fontWeight={600} mb={3}>
+            {/* <Typography variant="h6" fontWeight={600} mb={3}>
               Subscribe to Newsletter
-            </Typography>
+            </Typography> */}
             <Stack spacing={2}>
-              <Stack direction="row" spacing={1}>
+              {/* <Stack direction="row" spacing={1}>
                 <Box
                   component="input"
                   sx={{
@@ -1074,7 +1074,7 @@ export const Footer = () => {
                 >
                   Subscribe
                 </Button>
-              </Stack>
+              </Stack> */}
               <Typography variant="caption" color="rgba(255,255,255,0.5)" mt={1}>
                 We respect your privacy. No spam, ever.
               </Typography>
@@ -1086,14 +1086,14 @@ export const Footer = () => {
           <Typography variant="body2" color="rgba(255,255,255,0.5)">
             © {currentYear} EcoPulse. All rights reserved.
           </Typography>
-          <Stack direction="row" spacing={3}>
+          {/* <Stack direction="row" spacing={3}>
             <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '0.875rem' }}>
               Privacy Policy
             </Link>
             <Link to="/terms" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '0.875rem' }}>
               Terms of Service
             </Link>
-          </Stack>
+          </Stack> */}
         </Stack>
       </Container>
     </Box>
